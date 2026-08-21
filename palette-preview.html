@@ -19,6 +19,39 @@
   --n-peach:#FBCBA6; --k-peach:#8A4718;
   --n-lilac:#D5C6F0; --k-lilac:#4B3486;
 }
+[data-t="dark"]{
+  --paper:#15130F; --paper2:#0C0B09;
+  --ink:#EFEADF; --ink-soft:#A79E8E; --ink-dim:#71695C;
+  --line:rgba(239,234,223,.13);
+}
+[data-t="dark"] body,body[data-t="dark"]{
+  background:
+    radial-gradient(120% 80% at 18% 0%,#211D17,transparent 58%),
+    radial-gradient(90% 70% at 85% 100%,#1C1913,transparent 60%),
+    linear-gradient(180deg,var(--paper),var(--paper2))}
+[data-t="dark"] .pola{background:#F7F2E6;
+  box-shadow:0 1px 1px rgba(0,0,0,.5),0 12px 22px -8px rgba(0,0,0,.6),0 30px 46px -26px rgba(0,0,0,.8)}
+[data-t="dark"] .pola h2{color:#2A2620}
+[data-t="dark"] .pola span{color:#6B655A}
+[data-t="dark"] .note{
+  box-shadow:0 1px 1px rgba(0,0,0,.45),0 10px 18px -8px rgba(0,0,0,.6),0 26px 40px -24px rgba(0,0,0,.75)}
+[data-t="dark"] .note:hover{box-shadow:0 2px 4px rgba(0,0,0,.5),0 20px 32px -12px rgba(0,0,0,.65)}
+[data-t="dark"] .btn{background:var(--ink);color:#15130F}
+[data-t="dark"] .btn--g{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px rgba(239,234,223,.28)}
+[data-t="dark"] body::after{opacity:.06;mix-blend-mode:screen}
+[data-t="dark"] .empty{border-color:rgba(239,234,223,.16)}
+
+/* тихий переключатель в углу — не плашка */
+.tt{position:fixed;right:20px;bottom:20px;z-index:40;width:38px;height:38px;border-radius:11px;
+  border:0;cursor:pointer;display:grid;place-items:center;
+  background:color-mix(in oklab,var(--paper) 70%,transparent);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 1px 2px rgba(0,0,0,.14),inset 0 0 0 1px var(--line);color:var(--ink-soft);
+  transition:color .2s,transform .12s}
+.tt:hover{color:var(--ink)}
+.tt:active{transform:scale(.94)}
+.tt svg{width:17px;height:17px}
+
 html{-webkit-font-smoothing:antialiased}
 body{margin:0;color:var(--ink);font:16px/1.55 -apple-system,system-ui,"SF Pro Text",sans-serif;
   background:
@@ -30,19 +63,9 @@ body::after{content:"";position:fixed;inset:0;z-index:100;pointer-events:none;op
 .serif{font-family:ui-serif,"New York",Georgia,serif}
 .wrap{width:100%;max-width:1160px;margin:0 auto;padding:0 32px}
 
-.bar{position:fixed;inset:0 0 auto 0;z-index:30;background:var(--glass);
-  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
-  box-shadow:0 1px 0 var(--line)}
-.bar__in{max-width:1160px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:20px}
-.mark{display:flex;align-items:center;gap:9px;font:600 14.5px/1 -apple-system,system-ui}
-.mark svg{width:19px;height:19px;color:var(--k-peach)}
-.jump{display:flex;gap:2px;margin-left:auto}
-.jump a{font:590 12.5px/1 -apple-system,system-ui;color:var(--ink-soft);padding:8px 12px;
-  border-radius:8px;text-decoration:none;transition:.2s}
-.jump a:hover{color:var(--ink);background:rgba(42,38,32,.06)}
 
 /* ---------- мечты: полароиды ---------- */
-.dreams{min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding:112px 0 72px}
+.dreams{min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding:88px 0 72px}
 .eyebrow{font:600 11px/1 -apple-system,system-ui;letter-spacing:.17em;text-transform:uppercase;color:var(--ink-dim)}
 .dreams h1{margin:14px 0 0;font-size:clamp(38px,5.6vw,64px);line-height:1.02;letter-spacing:-.028em;font-weight:600}
 .lead{margin:18px 0 0;color:var(--ink-soft);max-width:44ch;font-size:17.5px}
@@ -108,7 +131,9 @@ body::after{content:"";position:fixed;inset:0;z-index:100;pointer-events:none;op
 .kid .box--on::after{left:5px;top:2px;width:4px;height:7.5px;border-width:0 1.8px 1.8px 0}
 .kid--done{opacity:.6}.kid--done .t{text-decoration:line-through}
 .sub{margin-left:25px;font-size:13px;opacity:.62}
-.note--done{opacity:.52}
+.note--done{opacity:.62}
+.note--done h3{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.8}
+[data-t="dark"] .note--done{opacity:.7}
 .empty{font-size:13.5px;color:var(--ink-dim);padding:16px 6px;
   border:1.5px dashed var(--line);border-radius:6px;text-align:center}
 .foot{padding:70px 0 100px;display:flex;gap:11px}
@@ -127,12 +152,11 @@ body::after{content:"";position:fixed;inset:0;z-index:100;pointer-events:none;op
   <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h3l2-4 3 8 2.5-5 1.5 3h6"/></symbol>
   <symbol id="i-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="7.5" ry="3.2"/><path d="M4.5 7v10c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2V7"/><path d="M4.5 12c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2"/></symbol>
   <symbol id="i-skill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v14H6.5A2.5 2.5 0 0 0 4 19.5z"/><path d="M9 7.5h6M9 11h4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2M12 19.4v2M2.6 12h2M19.4 12h2M5.4 5.4l1.4 1.4M17.2 17.2l1.4 1.4M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4"/></symbol>
 </svg>
+<button class="tt" id="tt" aria-label="Сменить тему"><svg><use href="#i-moon" id="ttIcon"/></svg></button>
 
-<div class="bar"><div class="bar__in">
-  <span class="mark"><svg><use href="#i-compass"/></svg>Ориентир</span>
-  <nav class="jump"><a href="#h3">3 месяца</a><a href="#h6">6 месяцев</a><a href="#h12">12 месяцев</a></nav>
-</div></div>
 
 <section class="dreams"><div class="wrap">
   <p class="eyebrow">Карта желаний</p>
@@ -207,5 +231,13 @@ body::after{content:"";position:fixed;inset:0;z-index:100;pointer-events:none;op
   </div>
   <div class="foot"><button class="btn">Сохранить копию</button><button class="btn btn--g">Загрузить</button></div>
 </div></section>
+<script>
+  var tt = document.getElementById('tt'), icon = document.getElementById('ttIcon');
+  tt.addEventListener('click', function () {
+    var dark = document.documentElement.dataset.t === 'dark';
+    document.documentElement.dataset.t = dark ? '' : 'dark';
+    icon.setAttribute('href', dark ? '#i-moon' : '#i-sun');
+  });
+</script>
 </body>
 </html>
