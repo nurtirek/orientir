@@ -273,3 +273,52 @@ test('goalsFor уводит выполненные вниз', () => {
   assert.strictEqual(list[0].title, 'В работе');
   assert.strictEqual(list[1].title, 'Сделано');
 });
+
+test('addArea добавляет сферу', () => {
+  const res = Model.addArea(emptyData(), 'Путешествия');
+  assert.strictEqual(res.data.areas.length, 6);
+  assert.ok(res.id);
+});
+
+test('renameArea меняет название во всех горизонтах сразу', () => {
+  const next = Model.renameArea(emptyData(), 'money', 'Финансы');
+  assert.strictEqual(next.areas.find(a => a.id === 'money').name, 'Финансы');
+});
+
+test('removeArea удаляет пустую сферу', () => {
+  const next = Model.removeArea(emptyData(), 'home');
+  assert.strictEqual(next.areas.some(a => a.id === 'home'), false);
+});
+
+test('removeArea отказывается удалять сферу с целями', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'home', horizon: 3, title: 'Ремонт' });
+  const next = Model.removeArea(g.data, 'home');
+  assert.strictEqual(next.areas.some(a => a.id === 'home'), true, 'сфера с целями остаётся');
+  assert.strictEqual(next.goals.length, 1);
+});
+
+test('addDream добавляет мечту без фото', () => {
+  const res = Model.addDream(emptyData(), 'Своя мастерская');
+  assert.strictEqual(res.data.dreams.length, 1);
+  assert.strictEqual(res.data.dreams[0].image, null);
+  assert.strictEqual(res.data.dreams[0].note, '');
+});
+
+test('editDream проставляет имя файла картинки', () => {
+  const d = Model.addDream(emptyData(), 'Мастерская');
+  const next = Model.editDream(d.data, d.id, { image: 'workshop.jpg' });
+  assert.strictEqual(next.dreams[0].image, 'workshop.jpg');
+  assert.strictEqual(next.dreams[0].title, 'Мастерская', 'остальные поля не тронуты');
+});
+
+test('editDream не стирает название пустой строкой', () => {
+  const d = Model.addDream(emptyData(), 'Мастерская');
+  const next = Model.editDream(d.data, d.id, { title: '  ' });
+  assert.strictEqual(next.dreams[0].title, 'Мастерская');
+});
+
+test('removeDream удаляет мечту', () => {
+  const d = Model.addDream(emptyData(), 'Мастерская');
+  const next = Model.removeDream(d.data, d.id);
+  assert.strictEqual(next.dreams.length, 0);
+});

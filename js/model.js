@@ -185,10 +185,61 @@
       .sort((a, b) => Number(isDone(a)) - Number(isDone(b)));
   }
 
+  function addArea(data, name) {
+    const next = clone(data);
+    const clean = String(name || '').trim();
+    if (!clean) return { data: next, id: null };
+    const area = { id: createId('a'), name: clean };
+    next.areas.push(area);
+    return { data: next, id: area.id };
+  }
+
+  function renameArea(data, id, name) {
+    const next = clone(data);
+    const clean = String(name || '').trim();
+    const area = next.areas.find(a => a.id === id);
+    if (area && clean) area.name = clean;
+    return next;
+  }
+
+  function removeArea(data, id) {
+    const next = clone(data);
+    const used = next.goals.some(g => g.areaId === id);
+    if (used) return next;
+    next.areas = next.areas.filter(a => a.id !== id);
+    return next;
+  }
+
+  function addDream(data, title) {
+    const next = clone(data);
+    const clean = String(title || '').trim();
+    if (!clean) return { data: next, id: null };
+    const dream = { id: createId('d'), title: clean, note: '', image: null };
+    next.dreams.push(dream);
+    return { data: next, id: dream.id };
+  }
+
+  function editDream(data, id, patch) {
+    const next = clone(data);
+    const dream = next.dreams.find(d => d.id === id);
+    if (!dream) return next;
+    if (typeof patch.title === 'string' && patch.title.trim()) dream.title = patch.title.trim();
+    if (typeof patch.note === 'string') dream.note = patch.note;
+    if (patch.image === null || typeof patch.image === 'string') dream.image = patch.image;
+    return next;
+  }
+
+  function removeDream(data, id) {
+    const next = clone(data);
+    next.dreams = next.dreams.filter(d => d.id !== id);
+    return next;
+  }
+
   const Model = {
     HORIZONS, VERSION, DEFAULT_DATA, createId, validate, parse, serialize,
     isDone, progress, canToggle, findNode, clone, toggle,
-    addGoal, addTask, editTitle, editStart, today, removeNode, goalsFor, depthOf
+    addGoal, addTask, editTitle, editStart, today, removeNode, goalsFor, depthOf,
+    addArea, renameArea, removeArea, addDream, editDream, removeDream
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Model;
