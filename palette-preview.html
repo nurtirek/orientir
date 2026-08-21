@@ -3,157 +3,140 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Карта желаний — макет</title>
+<title>Ориентир — макет</title>
 <style>
 *,*::before,*::after{box-sizing:border-box}
-
-/* ============ A · ПОЛНОЧЬ ============ */
-:root,[data-p="A"]{
-  --bg:#080B14; --s1:#111726; --s2:#182033; --s3:#222C44;
-  --text:#EFF2F9; --muted:#8B95AE; --dim:#5A6280;
-  --accent:#D4AC3A; --accent-soft:rgba(212,172,58,.13);
-  --done:#3E9B7F; --line:rgba(255,255,255,.085);
-  --edge:rgba(255,255,255,.07); --glass:rgba(17,23,38,.62);
+:root{
+  --bg:#07090F; --s1:#0E1220; --s2:#151A2B; --s3:#1E2539;
+  --text:#F2F4FA; --muted:#98A0B8; --dim:#616A85;
+  --line:rgba(255,255,255,.08); --edge:rgba(255,255,255,.075);
+  --glass:rgba(14,18,32,.6);
+  /* у каждой сферы свой драгоценный цвет — не один акцент на всё */
+  --health:#3FB68B; --money:#D9A441; --skills:#5B8FE0; --people:#D2607F; --home:#9B7BE0;
 }
-/* ============ B · ГРАНАТ ============ */
-[data-p="B"]{
-  --bg:#120810; --s1:#1F0F19; --s2:#2B1624; --s3:#3A1F31;
-  --text:#F8EFF2; --muted:#B295A0; --dim:#7C6370;
-  --accent:#E0A44E; --accent-soft:rgba(224,164,78,.13);
-  --done:#5FA383; --line:rgba(255,255,255,.09);
-  --edge:rgba(255,255,255,.08); --glass:rgba(31,15,25,.62);
-}
-
 html{-webkit-font-smoothing:antialiased}
 body{margin:0;background:var(--bg);color:var(--text);
-  font:16px/1.55 -apple-system,system-ui,"SF Pro Text",sans-serif;
-  transition:background-color .5s ease}
+  font:16px/1.55 -apple-system,system-ui,"SF Pro Text",sans-serif;position:relative}
+/* зерно поверх всего — убивает пластиковую плоскость */
+body::after{content:"";position:fixed;inset:0;z-index:100;pointer-events:none;opacity:.05;
+  mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 .serif{font-family:ui-serif,"New York",Georgia,serif}
+.wrap{width:100%;max-width:1140px;margin:0 auto;padding:0 30px}
 
-/* ---------- плавающая панель ---------- */
-.bar{position:fixed;inset:0 0 auto 0;z-index:20;background:var(--glass);
+.bar{position:fixed;inset:0 0 auto 0;z-index:30;background:var(--glass);
   -webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
   border-top:1px solid var(--edge)}
-.bar::after{content:"";position:absolute;left:0;right:0;top:100%;height:22px;
-  background:linear-gradient(var(--bg),transparent);opacity:.75;pointer-events:none}
-.bar__in{max-width:1120px;margin:0 auto;padding:0 28px;height:52px;display:flex;align-items:center;gap:18px}
-.mark{font:600 13px/1 -apple-system,system-ui;letter-spacing:.18em;color:var(--text)}
-.jump{display:flex;gap:2px;margin-left:6px}
-.jump a{font:590 12px/1 -apple-system,system-ui;letter-spacing:.02em;color:var(--muted);
-  padding:7px 11px;border-radius:7px;text-decoration:none;transition:color .2s,background-color .2s}
+.bar::after{content:"";position:absolute;left:0;right:0;top:100%;height:24px;
+  background:linear-gradient(var(--bg),transparent);opacity:.8}
+.bar__in{max-width:1140px;margin:0 auto;padding:0 30px;height:54px;display:flex;align-items:center;gap:20px}
+.mark{display:flex;align-items:center;gap:9px;font:600 14px/1 -apple-system,system-ui;letter-spacing:.02em}
+.mark svg{width:19px;height:19px;color:var(--money)}
+.jump{display:flex;gap:2px;margin-left:auto}
+.jump a{font:590 12.5px/1 -apple-system,system-ui;color:var(--muted);padding:8px 12px;
+  border-radius:8px;text-decoration:none;transition:.2s}
 .jump a:hover{color:var(--text);background:rgba(255,255,255,.05)}
-.seg{margin-left:auto;display:flex;padding:2px;border-radius:9px;background:rgba(255,255,255,.06);
-  box-shadow:inset 0 0 0 1px var(--line)}
-.seg button{font:590 12px/1 -apple-system,system-ui;color:var(--muted);background:none;border:0;
-  padding:7px 13px;border-radius:7px;cursor:pointer;transition:color .2s}
-.seg button[aria-pressed="true"]{color:var(--text);background:var(--s3);
-  box-shadow:0 1px 2px rgba(0,0,0,.4),inset 0 1px 0 var(--edge)}
 
-.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
-
-/* ---------- карта желаний ---------- */
-.dreams{min-height:100svh;display:flex;flex-direction:column;justify-content:center;
-  padding:120px 0 90px;position:relative}
-.dreams::before{content:"";position:absolute;left:50%;top:6%;width:min(760px,92vw);height:420px;
-  transform:translateX(-50%);pointer-events:none;
-  background:radial-gradient(ellipse at 50% 0,var(--accent-soft),transparent 70%);filter:blur(20px)}
-.eyebrow{font:600 11px/1 -apple-system,system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
-.dreams h1{margin:14px 0 0;font-size:clamp(40px,6vw,68px);line-height:1.02;letter-spacing:-.028em;font-weight:600}
-.dreams p{margin:16px 0 0;color:var(--muted);max-width:46ch;font-size:17px}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px;position:relative}
-.tile{border-radius:16px;overflow:hidden;background:var(--s1);position:relative;
-  box-shadow:0 1px 0 var(--edge) inset,0 22px 48px rgba(0,0,0,.55);
-  transition:transform .45s cubic-bezier(.2,.8,.3,1),box-shadow .45s}
-.tile:hover{transform:translateY(-4px);box-shadow:0 1px 0 var(--edge) inset,0 30px 60px rgba(0,0,0,.62)}
-.tile__ph{aspect-ratio:4/3;background:
-  radial-gradient(130% 100% at 26% 14%,var(--s3),transparent 60%),
-  linear-gradient(155deg,var(--s2),var(--s1))}
-.tile__ph--none{display:flex;align-items:flex-end}
-.tile__b{padding:16px 18px 18px;position:relative}
-.tile__b::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:46px;
-  background:linear-gradient(transparent,var(--s1))}
-.tile h2{margin:0;font-size:22px;line-height:1.22;letter-spacing:-.012em;font-weight:600}
-.tile span{display:block;margin-top:5px;color:var(--muted);font-size:14px}
+/* ---------- мечты ---------- */
+.dreams{min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding:112px 0 72px}
+.eyebrow{font:600 11px/1 -apple-system,system-ui;letter-spacing:.17em;text-transform:uppercase;color:var(--dim)}
+.dreams h1{margin:14px 0 0;font-size:clamp(38px,5.6vw,64px);line-height:1;letter-spacing:-.03em;font-weight:600}
+.lead{margin:18px 0 0;color:var(--muted);max-width:44ch;font-size:17.5px}
+.tiles{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:18px;margin-top:40px;align-items:end}
+.tile{border-radius:18px;overflow:hidden;position:relative;isolation:isolate;
+  box-shadow:0 1px 0 var(--edge) inset,0 26px 54px rgba(0,0,0,.6);
+  transition:transform .5s cubic-bezier(.2,.8,.3,1)}
+.tile:hover{transform:translateY(-5px)}
+.tile__art{position:relative}
+.tile--tall .tile__art{height:clamp(250px,33vh,340px)}
+.tile__art{height:clamp(190px,24vh,250px)}
+.a1{background:radial-gradient(120% 95% at 22% 12%,#2C6B5A,transparent 58%),
+  radial-gradient(100% 80% at 82% 78%,#7A5A2E,transparent 60%),linear-gradient(160deg,#141A26,#0B0E17)}
+.a2{background:radial-gradient(120% 95% at 78% 16%,#2E4A82,transparent 58%),
+  radial-gradient(90% 80% at 18% 84%,#5C3560,transparent 60%),linear-gradient(160deg,#111726,#0A0D16)}
+.a3{background:radial-gradient(120% 95% at 30% 20%,#6B3A4C,transparent 56%),
+  radial-gradient(95% 80% at 85% 80%,#2F5C63,transparent 60%),linear-gradient(160deg,#161320,#0B0912)}
+.tile__cap{position:absolute;inset:auto 0 0 0;padding:52px 20px 20px;
+  background:linear-gradient(transparent,rgba(6,8,14,.55) 42%,rgba(6,8,14,.93))}
+.tile h2{margin:0;font-size:23px;line-height:1.2;letter-spacing:-.014em;font-weight:600}
+.tile span{display:block;margin-top:6px;color:var(--muted);font-size:14px}
 
 /* ---------- горизонт ---------- */
-.horizon{padding:74px 0 10px}
-.hhead{display:flex;align-items:baseline;gap:14px;padding-bottom:18px;
-  border-bottom:1px solid var(--line);margin-bottom:26px}
-.hhead h2{margin:0;font-size:34px;line-height:1.1;letter-spacing:-.02em;font-weight:600}
-.hhead em{font-style:normal;color:var(--dim);font:590 12px/1 -apple-system,system-ui;letter-spacing:.02em}
-.areas{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.area__n{font:600 11px/1 -apple-system,system-ui;letter-spacing:.15em;text-transform:uppercase;
-  color:var(--dim);margin:2px 0 12px 2px}
-.stack{display:flex;flex-direction:column;gap:10px}
+.horizon{padding:78px 0 0}
+.hhead{display:flex;align-items:baseline;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:30px}
+.hhead h2{margin:0;font-size:36px;line-height:1.08;letter-spacing:-.024em;font-weight:600}
+.hhead em{font-style:normal;color:var(--dim);font:590 12.5px/1 -apple-system,system-ui}
+.areas{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.ahead{display:flex;align-items:center;gap:9px;margin:0 0 13px 2px}
+.ahead .ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;
+  background:color-mix(in oklab,var(--c) 16%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--c) 30%,transparent)}
+.ahead svg{width:15px;height:15px;color:var(--c)}
+.ahead b{font:600 11.5px/1 -apple-system,system-ui;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:11px}
 
-/* ---------- цель как материал ---------- */
-.card{border-radius:14px;padding:15px 16px;cursor:pointer;
+.card{border-radius:15px;padding:15px 16px;cursor:pointer;position:relative;overflow:hidden;
   background:linear-gradient(180deg,var(--s2),var(--s1));
-  box-shadow:0 1px 0 var(--edge) inset,0 10px 26px rgba(0,0,0,.42);
-  transition:transform .12s cubic-bezier(.3,.9,.4,1),box-shadow .3s}
+  box-shadow:0 1px 0 var(--edge) inset,0 12px 30px rgba(0,0,0,.45);
+  transition:transform .12s cubic-bezier(.3,.9,.4,1)}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--c);opacity:.55}
 .card:active{transform:scale(.985)}
-.top{display:flex;align-items:center;gap:11px}
-.chip{font:600 11.5px/1 -apple-system,system-ui;letter-spacing:.03em;color:var(--accent);
-  background:var(--accent-soft);padding:6px 8px;border-radius:6px;
-  font-variant-numeric:tabular-nums;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
-.box{width:21px;height:21px;border-radius:6.5px;flex:none;
-  box-shadow:inset 0 0 0 1.5px var(--dim);transition:box-shadow .2s,background-color .2s}
-.box--on{background:var(--done);box-shadow:inset 0 0 0 1.5px var(--done);position:relative}
+.top{display:flex;align-items:center;gap:12px}
+.ring{width:34px;height:34px;flex:none;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;
+  font:600 10.5px/1 -apple-system,system-ui;color:var(--c);font-variant-numeric:tabular-nums}
+.box{width:21px;height:21px;border-radius:6.5px;flex:none;box-shadow:inset 0 0 0 1.5px var(--dim);transition:.2s}
+.box--on{background:var(--c);box-shadow:inset 0 0 0 1.5px var(--c);position:relative}
 .box--on::after{content:"";position:absolute;left:7px;top:3.5px;width:5px;height:9px;
   border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
-.card h3{margin:0;font-size:18.5px;line-height:1.28;letter-spacing:-.008em;font-weight:590;flex:1}
-.start{margin:8px 0 0 32px;font-size:12.5px;color:var(--dim);letter-spacing:.002em}
-.kids{margin:13px 0 2px 32px;padding-top:11px;border-top:1px solid var(--line);
+.card h3{margin:0;font-size:18.5px;line-height:1.26;letter-spacing:-.01em;font-weight:590;flex:1}
+.start{margin:9px 0 0 46px;font-size:12.5px;color:var(--dim)}
+.card--flat .start{margin-left:33px}
+.kids{margin:13px 0 2px 46px;padding-top:12px;border-top:1px solid var(--line);
   display:flex;flex-direction:column;gap:11px}
 .kid{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--muted)}
 .kid .box{width:17px;height:17px;border-radius:5.5px}
 .kid .box--on::after{left:5.5px;top:2.5px;width:4px;height:7.5px;border-width:0 1.8px 1.8px 0}
-.kid--done{color:var(--dim)}
-.kid--done .t{text-decoration:line-through;text-decoration-color:var(--dim)}
+.kid--done{color:var(--dim)}.kid--done .t{text-decoration:line-through}
 .sub{margin-left:27px;font-size:13.5px;color:var(--dim)}
-.empty{font-size:13.5px;color:var(--dim);opacity:.62;padding:14px 2px}
-.done .card{opacity:.55}
-
-.foot{padding:70px 0 90px;display:flex;gap:10px}
+.empty{font-size:13.5px;color:var(--dim);opacity:.55;padding:15px 3px}
+.done .card{opacity:.5}
+.foot{padding:64px 0 96px;display:flex;gap:11px}
 .btn{font:600 12px/1 -apple-system,system-ui;letter-spacing:.09em;text-transform:uppercase;
-  padding:13px 19px;border-radius:9px;border:0;cursor:pointer;background:var(--accent);color:var(--bg);
-  transition:transform .12s}
+  padding:14px 20px;border-radius:10px;border:0;cursor:pointer;background:var(--money);color:#100C04;transition:transform .12s}
 .btn:active{transform:scale(.97)}
 .btn--g{background:rgba(255,255,255,.05);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
-
-@media (max-width:900px){.tiles,.areas{grid-template-columns:1fr}.jump{display:none}}
+@media (max-width:960px){.tiles,.areas{grid-template-columns:1fr}.jump{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
 </style>
 </head>
-<body data-p="A">
+<body>
+<svg style="display:none">
+  <symbol id="i-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h3l2-4 3 8 2.5-5 1.5 3h6"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="7.5" ry="3.2"/><path d="M4.5 7v10c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2V7"/><path d="M4.5 12c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2"/></symbol>
+  <symbol id="i-skill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v14H6.5A2.5 2.5 0 0 0 4 19.5z"/><path d="M9 7.5h6M9 11h4"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"/><path d="M16 5.6a3.2 3.2 0 0 1 0 6.3M17.5 14.6a5.5 5.5 0 0 1 3 4.9"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z"/><path d="M9.5 20.5v-6h5v6"/></symbol>
+</svg>
 
 <div class="bar"><div class="bar__in">
-  <span class="mark">SAYA</span>
+  <span class="mark"><svg><use href="#i-compass"/></svg>Ориентир</span>
   <nav class="jump"><a href="#h3">3 месяца</a><a href="#h6">6 месяцев</a><a href="#h12">12 месяцев</a></nav>
-  <div class="seg">
-    <button aria-pressed="true" onclick="pick('A',this)">Полночь</button>
-    <button aria-pressed="false" onclick="pick('B',this)">Гранат</button>
-  </div>
 </div></div>
 
 <section class="dreams"><div class="wrap">
   <p class="eyebrow">Карта желаний</p>
   <h1 class="serif">То, ради чего<br>всё остальное</h1>
-  <p>Здесь только то, что не имеет срока. Планы ниже — способ подойти к этому ближе.</p>
-
+  <p class="lead">Здесь только то, что не имеет срока. Планы ниже — способ подойти ближе.</p>
   <div class="tiles">
-    <article class="tile">
-      <div class="tile__ph"></div>
-      <div class="tile__b"><h2 class="serif">Своя мастерская</h2><span>Свет с севера, верстак у окна</span></div>
-    </article>
-    <article class="tile">
-      <div class="tile__ph"></div>
-      <div class="tile__b"><h2 class="serif">Дом у воды</h2><span>Чтобы утром слышно было воду</span></div>
-    </article>
-    <article class="tile">
-      <div class="tile__ph tile__ph--none"></div>
-      <div class="tile__b"><h2 class="serif">Работать откуда угодно</h2><span>Без привязки к городу</span></div>
-    </article>
+    <article class="tile tile--tall"><div class="tile__art a1"></div>
+      <div class="tile__cap"><h2 class="serif">Своя мастерская</h2><span>Свет с севера, верстак у окна</span></div></article>
+    <article class="tile"><div class="tile__art a2"></div>
+      <div class="tile__cap"><h2 class="serif">Дом у воды</h2><span>Чтобы утром было слышно воду</span></div></article>
+    <article class="tile"><div class="tile__art a3"></div>
+      <div class="tile__cap"><h2 class="serif">Работать откуда угодно</h2><span>Без привязки к городу</span></div></article>
   </div>
 </div></section>
 
@@ -161,68 +144,62 @@ body{margin:0;background:var(--bg);color:var(--text);
   <div class="hhead"><h2 class="serif">3 месяца</h2><em>4 из 9 закрыто</em></div>
   <div class="areas">
 
-    <div>
-      <div class="area__n">Навыки</div>
+    <div style="--c:var(--skills)">
+      <div class="ahead"><span class="ico"><svg><use href="#i-skill"/></svg></span><b>Навыки</b></div>
       <div class="stack">
         <div class="card">
-          <div class="top"><span class="chip">3 / 7</span><h3 class="serif">Английский до уверенного B2</h3></div>
+          <div class="top">
+            <span class="ring"><svg width="34" height="34"><circle cx="17" cy="17" r="14" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2.5"/><circle cx="17" cy="17" r="14" fill="none" stroke="var(--c)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="50.3"/></svg><b>3/7</b></span>
+            <h3 class="serif">Английский до уверенного B2</h3>
+          </div>
           <div class="start">Старт 22 августа · Сейчас A2, читаю со словарём</div>
           <div class="kids">
             <div class="kid kid--done"><span class="box box--on"></span><span class="t">Найти преподавателя</span></div>
-            <div class="kid kid--done"><span class="box box--on"></span><span class="t">Составить расписание</span></div>
             <div class="kid"><span class="box"></span><span class="t">Заниматься дважды в неделю</span></div>
             <div class="sub">└ Понедельник и четверг, 19:00</div>
           </div>
         </div>
-        <div class="card">
-          <div class="top"><span class="box"></span><h3 class="serif">Дочитать «Дизайн привычных вещей»</h3></div>
-          <div class="start">Старт 22 августа</div>
-        </div>
+        <div class="card card--flat"><div class="top"><span class="box"></span><h3 class="serif">Дочитать «Дизайн привычных вещей»</h3></div>
+          <div class="start">Старт 22 августа</div></div>
       </div>
     </div>
 
-    <div>
-      <div class="area__n">Деньги</div>
+    <div style="--c:var(--money)">
+      <div class="ahead"><span class="ico"><svg><use href="#i-coin"/></svg></span><b>Деньги</b></div>
       <div class="stack">
         <div class="card">
-          <div class="top"><span class="chip">1 / 4</span><h3 class="serif">Подушка на три месяца</h3></div>
+          <div class="top">
+            <span class="ring"><svg width="34" height="34"><circle cx="17" cy="17" r="14" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2.5"/><circle cx="17" cy="17" r="14" fill="none" stroke="var(--c)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="66"/></svg><b>1/4</b></span>
+            <h3 class="serif">Подушка на три месяца</h3>
+          </div>
           <div class="start">Старт 22 августа · Сейчас 40 000 из 300 000</div>
           <div class="kids">
             <div class="kid kid--done"><span class="box box--on"></span><span class="t">Открыть отдельный счёт</span></div>
             <div class="kid"><span class="box"></span><span class="t">Автоперевод в день зарплаты</span></div>
           </div>
         </div>
-        <div class="done"><div class="card">
-          <div class="top"><span class="box box--on"></span><h3 class="serif">Закрыть рассрочку</h3></div>
-          <div class="start">Старт 22 августа · Оставалось 18 000</div>
-        </div></div>
+        <div class="done"><div class="card card--flat"><div class="top"><span class="box box--on"></span><h3 class="serif">Закрыть рассрочку</h3></div>
+          <div class="start">Старт 22 августа · Оставалось 18 000</div></div></div>
       </div>
     </div>
 
-    <div>
-      <div class="area__n">Здоровье</div>
+    <div style="--c:var(--health)">
+      <div class="ahead"><span class="ico"><svg><use href="#i-heart"/></svg></span><b>Здоровье</b></div>
       <div class="stack">
         <div class="card">
-          <div class="top"><span class="box"></span><h3 class="serif">Сходить к стоматологу</h3></div>
-          <div class="start">Старт 22 августа</div>
+          <div class="top">
+            <span class="ring"><svg width="34" height="34"><circle cx="17" cy="17" r="14" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2.5"/><circle cx="17" cy="17" r="14" fill="none" stroke="var(--c)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="22"/></svg><b>5/7</b></span>
+            <h3 class="serif">Спать по семь часов</h3>
+          </div>
+          <div class="start">Старт 22 августа · Сейчас пять с половиной</div>
         </div>
-        <div class="empty">пока пусто</div>
+        <div class="card card--flat"><div class="top"><span class="box"></span><h3 class="serif">Сходить к стоматологу</h3></div>
+          <div class="start">Старт 22 августа</div></div>
       </div>
     </div>
 
   </div>
-
-  <div class="foot">
-    <button class="btn">Сохранить копию</button>
-    <button class="btn btn--g">Загрузить</button>
-  </div>
+  <div class="foot"><button class="btn">Сохранить копию</button><button class="btn btn--g">Загрузить</button></div>
 </div></section>
-
-<script>
-function pick(p, btn){
-  document.body.dataset.p = p;
-  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
-}
-</script>
 </body>
 </html>
