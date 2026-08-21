@@ -61,7 +61,54 @@
     return JSON.stringify(copy, null, 2);
   }
 
-  const Model = { HORIZONS, VERSION, DEFAULT_DATA, createId, validate, parse, serialize };
+  function children(node) {
+    return Array.isArray(node.tasks) ? node.tasks : [];
+  }
+
+  function isDone(node) {
+    const kids = children(node);
+    if (kids.length === 0) return node.done === true;
+    return kids.every(isDone);
+  }
+
+  function progress(node) {
+    const kids = children(node);
+    if (kids.length === 0) return null;
+    return { done: kids.filter(isDone).length, total: kids.length };
+  }
+
+  function canToggle(node) {
+    return children(node).length === 0;
+  }
+
+  function findNode(data, id) {
+    function walk(nodes) {
+      for (const node of nodes) {
+        if (node.id === id) return node;
+        const found = walk(children(node));
+        if (found) return found;
+      }
+      return null;
+    }
+    return walk(data.goals);
+  }
+
+  function clone(data) {
+    return JSON.parse(JSON.stringify(data));
+  }
+
+  function toggle(data, id) {
+    const next = clone(data);
+    const node = findNode(next, id);
+    if (!node || !canToggle(node)) return next;
+    node.done = !node.done;
+    return next;
+  }
+
+  const Model = {
+    HORIZONS, VERSION, DEFAULT_DATA, createId, validate, parse, serialize,
+    isDone, progress, canToggle, findNode, clone, toggle
+  };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Model;
   else root.Model = Model;
