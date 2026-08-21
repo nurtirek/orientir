@@ -141,3 +141,135 @@ test('toggle находит вложенную подзадачу', () => {
   assert.strictEqual(next.goals[0].tasks[0].tasks[0].done, true);
   assert.strictEqual(Model.isDone(next.goals[0]), true, 'закрытие последней подзадачи закрывает всю цепочку');
 });
+
+function emptyData() {
+  return { version: 1, updatedAt: null, areas: Model.DEFAULT_DATA.areas.slice(), dreams: [], goals: [] };
+}
+
+test('addGoal добавляет цель и возвращает её id', () => {
+  const res = Model.addGoal(emptyData(), { areaId: 'money', horizon: 3, title: 'Подушка на 3 месяца' });
+  assert.strictEqual(res.data.goals.length, 1);
+  assert.strictEqual(res.data.goals[0].title, 'Подушка на 3 месяца');
+  assert.strictEqual(res.data.goals[0].horizon, 3);
+  assert.deepStrictEqual(res.data.goals[0].tasks, []);
+  assert.ok(Model.findNode(res.data, res.id));
+});
+
+test('addGoal проставляет дату старта и пустую заметку', () => {
+  const res = Model.addGoal(emptyData(), { areaId: 'money', horizon: 3, title: 'Подушка' });
+  assert.match(res.data.goals[0].startedAt, /^\d{4}-\d{2}-\d{2}$/);
+  assert.strictEqual(res.data.goals[0].start, '');
+});
+
+test('addGoal принимает заметку о старте', () => {
+  const res = Model.addGoal(emptyData(), {
+    areaId: 'skills', horizon: 6, title: 'Английский', start: 'Сейчас A2'
+  });
+  assert.strictEqual(res.data.goals[0].start, 'Сейчас A2');
+});
+
+test('editStart меняет заметку и не трогает дату', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 6, title: 'Английский', start: 'A2' });
+  const was = g.data.goals[0].startedAt;
+  const next = Model.editStart(g.data, g.id, 'Сейчас A2, читаю со словарём');
+  assert.strictEqual(next.goals[0].start, 'Сейчас A2, читаю со словарём');
+  assert.strictEqual(next.goals[0].startedAt, was, 'дата старта не сдвигается');
+});
+
+test('editStart разрешает стереть заметку в пустую', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 6, title: 'X', start: 'A2' });
+  const next = Model.editStart(g.data, g.id, '');
+  assert.strictEqual(next.goals[0].start, '');
+});
+
+test('правка названия не трогает стартовую точку', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 6, title: 'Старое', start: 'A2' });
+  const next = Model.editTitle(g.data, g.id, 'Новое');
+  assert.strictEqual(next.goals[0].start, 'A2');
+  assert.strictEqual(next.goals[0].startedAt, g.data.goals[0].startedAt);
+});
+
+test('addGoal отклоняет пустое название', () => {
+  const res = Model.addGoal(emptyData(), { areaId: 'money', horizon: 3, title: '   ' });
+  assert.strictEqual(res.id, null);
+  assert.strictEqual(res.data.goals.length, 0);
+});
+
+test('addGoal отклоняет недопустимый горизонт', () => {
+  const res = Model.addGoal(emptyData(), { areaId: 'money', horizon: 4, title: 'Что-то' });
+  assert.strictEqual(res.id, null);
+});
+
+test('addTask добавляет задачу в цель без задач', () => {
+  const first = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 6, title: 'Английский' });
+  const res = Model.addTask(first.data, first.id, 'Найти преподавателя');
+  const goal = Model.findNode(res.data, first.id);
+  assert.strictEqual(goal.tasks.length, 1);
+  assert.strictEqual(goal.tasks[0].title, 'Найти преподавателя');
+});
+
+test('addTask добавляет подзадачу вторым уровнем', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 6, title: 'Английский' });
+  const t = Model.addTask(g.data, g.id, 'Найти преподавателя');
+  const s = Model.addTask(t.data, t.id, 'Написать троим');
+  const goal = Model.findNode(s.data, g.id);
+  assert.strictEqual(goal.tasks[0].tasks.length, 1);
+});
+
+test('addTask не создаёт третий уровень', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 6, title: 'Английский' });
+  const t = Model.addTask(g.data, g.id, 'Задача');
+  const s = Model.addTask(t.data, t.id, 'Подзадача');
+  const deeper = Model.addTask(s.data, s.id, 'Слишком глубоко');
+  assert.strictEqual(deeper.id, null);
+  const goal = Model.findNode(deeper.data, g.id);
+  assert.strictEqual(goal.tasks[0].tasks[0].tasks.length, 0);
+});
+
+test('editTitle меняет название', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'home', horizon: 12, title: 'Старое' });
+  const next = Model.editTitle(g.data, g.id, 'Новое');
+  assert.strictEqual(Model.findNode(next, g.id).title, 'Новое');
+});
+
+test('editTitle не стирает название пустой строкой', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'home', horizon: 12, title: 'Старое' });
+  const next = Model.editTitle(g.data, g.id, '  ');
+  assert.strictEqual(Model.findNode(next, g.id).title, 'Старое');
+});
+
+test('removeNode удаляет цель вместе с задачами', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 3, title: 'Цель' });
+  const t = Model.addTask(g.data, g.id, 'Задача');
+  const next = Model.removeNode(t.data, g.id);
+  assert.strictEqual(next.goals.length, 0);
+  assert.strictEqual(Model.findNode(next, t.id), null);
+});
+
+test('removeNode удаляет отдельную задачу, не трогая цель', () => {
+  const g = Model.addGoal(emptyData(), { areaId: 'skills', horizon: 3, title: 'Цель' });
+  const t = Model.addTask(g.data, g.id, 'Задача');
+  const next = Model.removeNode(t.data, t.id);
+  assert.strictEqual(next.goals.length, 1);
+  assert.strictEqual(next.goals[0].tasks.length, 0);
+});
+
+test('goalsFor отбирает по горизонту и сфере', () => {
+  let d = emptyData();
+  d = Model.addGoal(d, { areaId: 'money', horizon: 3, title: 'A' }).data;
+  d = Model.addGoal(d, { areaId: 'money', horizon: 6, title: 'B' }).data;
+  d = Model.addGoal(d, { areaId: 'health', horizon: 3, title: 'C' }).data;
+  const list = Model.goalsFor(d, 3, 'money');
+  assert.strictEqual(list.length, 1);
+  assert.strictEqual(list[0].title, 'A');
+});
+
+test('goalsFor уводит выполненные вниз', () => {
+  let d = emptyData();
+  const a = Model.addGoal(d, { areaId: 'money', horizon: 3, title: 'Сделано' });
+  d = Model.addGoal(a.data, { areaId: 'money', horizon: 3, title: 'В работе' }).data;
+  d = Model.toggle(d, a.id);
+  const list = Model.goalsFor(d, 3, 'money');
+  assert.strictEqual(list[0].title, 'В работе');
+  assert.strictEqual(list[1].title, 'Сделано');
+});

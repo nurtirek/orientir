@@ -105,9 +105,90 @@
     return next;
   }
 
+  const MAX_DEPTH = 2;
+
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function depthOf(data, id) {
+    function walk(nodes, level) {
+      for (const node of nodes) {
+        if (node.id === id) return level;
+        const found = walk(children(node), level + 1);
+        if (found !== -1) return found;
+      }
+      return -1;
+    }
+    return walk(data.goals, 0);
+  }
+
+  function addGoal(data, opts) {
+    const next = clone(data);
+    const title = String(opts.title || '').trim();
+    const areaExists = next.areas.some(a => a.id === opts.areaId);
+    if (!title || !HORIZONS.includes(opts.horizon) || !areaExists) {
+      return { data: next, id: null };
+    }
+    const goal = {
+      id: createId('g'), title: title, areaId: opts.areaId,
+      horizon: opts.horizon,
+      start: String(opts.start || '').trim(),
+      startedAt: today(),
+      done: false, tasks: []
+    };
+    next.goals.push(goal);
+    return { data: next, id: goal.id };
+  }
+
+  function addTask(data, parentId, title) {
+    const next = clone(data);
+    const clean = String(title || '').trim();
+    const parent = findNode(next, parentId);
+    if (!clean || !parent) return { data: next, id: null };
+    if (depthOf(next, parentId) >= MAX_DEPTH) return { data: next, id: null };
+    const node = { id: createId('t'), title: clean, done: false, tasks: [] };
+    parent.tasks.push(node);
+    return { data: next, id: node.id };
+  }
+
+  function editStart(data, goalId, start) {
+    const next = clone(data);
+    const goal = next.goals.find(g => g.id === goalId);
+    if (goal) goal.start = String(start == null ? '' : start).trim();
+    return next;
+  }
+
+  function editTitle(data, id, title) {
+    const next = clone(data);
+    const clean = String(title || '').trim();
+    const node = findNode(next, id);
+    if (node && clean) node.title = clean;
+    return next;
+  }
+
+  function removeNode(data, id) {
+    const next = clone(data);
+    function strip(list) {
+      const index = list.findIndex(n => n.id === id);
+      if (index !== -1) { list.splice(index, 1); return true; }
+      return list.some(n => strip(children(n)));
+    }
+    strip(next.goals);
+    return next;
+  }
+
+  function goalsFor(data, horizon, areaId) {
+    return data.goals
+      .filter(g => g.horizon === horizon && g.areaId === areaId)
+      .slice()
+      .sort((a, b) => Number(isDone(a)) - Number(isDone(b)));
+  }
+
   const Model = {
     HORIZONS, VERSION, DEFAULT_DATA, createId, validate, parse, serialize,
-    isDone, progress, canToggle, findNode, clone, toggle
+    isDone, progress, canToggle, findNode, clone, toggle,
+    addGoal, addTask, editTitle, editStart, today, removeNode, goalsFor, depthOf
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Model;
