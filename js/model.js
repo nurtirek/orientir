@@ -117,8 +117,13 @@
 
   const MAX_DEPTH = 2;
 
-  function today() {
-    return new Date().toISOString().slice(0, 10);
+  function today(now) {
+    /* по местному времени, не по UTC: иначе всё, что заведено ночью,
+       помечается вчерашним днём в часовых поясах восточнее Гринвича */
+    var d = now || new Date();
+    var m = String(d.getMonth() + 1);
+    var day = String(d.getDate());
+    return d.getFullYear() + '-' + (m.length < 2 ? '0' + m : m) + '-' + (day.length < 2 ? '0' + day : day);
   }
 
   function depthOf(data, id) {

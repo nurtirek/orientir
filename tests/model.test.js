@@ -336,3 +336,13 @@ test('removeDream удаляет мечту', () => {
   const next = Model.removeDream(d.data, d.id);
   assert.strictEqual(next.dreams.length, 0);
 });
+
+test('дата старта берётся по местному времени, а не по UTC', () => {
+  // 22 августа 01:30 по местному времени в поясе +03 — это ещё 21-е по UTC
+  const localNight = new Date(2026, 7, 22, 1, 30, 0);
+  assert.strictEqual(Model.today(localNight), '2026-08-22');
+});
+
+test('today отдаёт формат ГГГГ-ММ-ДД с ведущими нулями', () => {
+  assert.strictEqual(Model.today(new Date(2026, 0, 5)), '2026-01-05');
+});
