@@ -14,7 +14,17 @@
       { id: 'people', name: 'Отношения' },
       { id: 'home', name: 'Дом' }
     ],
-    dreams: [],
+    dreams: [
+      { id: 'd1', title: 'Резиденция в горах',      note: 'Камень, свет и тишина',            image: 'rezidenciya-v-gorah.jpg' },
+      { id: 'd2', title: 'Квартира с панорамой',    note: 'Город во всю стену',               image: 'kvartira-s-panoramoy.jpg' },
+      { id: 'd3', title: 'Дом в тихом квартале',    note: 'Зелень под окнами, свои дворы',    image: 'dom-v-tihom-kvartale.jpg' },
+      { id: 'd4', title: 'Forbes 30 под 30',        note: 'Попасть в список до тридцати',     image: 'forbes.jpg' },
+      { id: 'd5', title: 'Капитал',                 note: 'Деньги, которые работают сами',    image: 'kapital.jpg' },
+      { id: 'd6', title: 'Genesis G80',             note: 'Первая своя машина',               image: 'genesis-g80.jpg' },
+      { id: 'd7', title: 'Гелендваген',             note: 'Чёрный, без компромиссов',         image: 'gelendvagen.jpg' },
+      { id: 'd8', title: 'Электроседан',            note: 'Тихий и быстрый',                  image: 'elektrosedan.jpg' },
+      { id: 'd9', title: 'Форма',                   note: 'Сухой вес и выносливость',         image: 'forma.jpg' }
+    ],
     goals: []
   };
 

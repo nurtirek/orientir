@@ -11,7 +11,21 @@ test('стартовые данные проходят валидацию', () =
 test('стартовые данные содержат пять сфер и ни одной цели', () => {
   assert.strictEqual(Model.DEFAULT_DATA.areas.length, 5);
   assert.strictEqual(Model.DEFAULT_DATA.goals.length, 0);
-  assert.strictEqual(Model.DEFAULT_DATA.dreams.length, 0);
+});
+
+test('карта желаний наполнена и у каждой мечты есть картинка', () => {
+  const dreams = Model.DEFAULT_DATA.dreams;
+  assert.strictEqual(dreams.length, 9);
+  for (const d of dreams) {
+    assert.ok(d.title, 'у мечты есть название');
+    assert.match(d.image, /\.jpg$/, 'у мечты указан файл картинки');
+    assert.ok(!d.image.includes('/'), 'в данных только имя файла, без пути');
+  }
+});
+
+test('имена картинок не повторяются', () => {
+  const names = Model.DEFAULT_DATA.dreams.map(d => d.image);
+  assert.strictEqual(new Set(names).size, names.length);
 });
 
 test('горизонты — только 3, 6 и 12', () => {
