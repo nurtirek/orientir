@@ -372,11 +372,37 @@
     return Promise.resolve();
   }
 
+  /* хранилище, которое нельзя уронить: на file:// обращение к localStorage
+     в Chrome может выбросить ошибку сразу при доступе к свойству */
+  function pickStorage() {
+    try {
+      var real = window.localStorage;
+      real.setItem('wishmap-probe', '1');
+      real.removeItem('wishmap-probe');
+      return { store: real, persistent: true };
+    } catch (e) {
+      var mem = {};
+      return {
+        persistent: false,
+        store: {
+          getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
+          setItem: function (k, v) { mem[k] = String(v); },
+          removeItem: function (k) { delete mem[k]; }
+        }
+      };
+    }
+  }
+
   function init() {
-    state.storage = window.localStorage;
+    var picked = pickStorage();
+    state.storage = picked.store;
     var loaded = Store.load(state.storage);
     state.data = loaded.data;
-    if (loaded.warning) notice(loaded.warning);
+    if (!picked.persistent) {
+      notice('Браузер не разрешает сохранение на этой странице. Правки живут только до перезагрузки — нажмите «Скопировать данные», чтобы их не потерять.');
+    } else if (loaded.warning) {
+      notice(loaded.warning);
+    }
     render();
 
     document.getElementById('addDream').addEventListener('click', function () {
@@ -428,5 +454,16 @@
     } catch (err) {}
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      init();
+    } catch (e) {
+      var box = document.createElement('div');
+      box.className = 'notice-wrap';
+      box.innerHTML = '<div class="notice"></div>';
+      box.querySelector('.notice').textContent =
+        'Страница не запустилась: ' + (e && e.message ? e.message : e);
+      document.body.prepend(box);
+    }
+  });
 })();
