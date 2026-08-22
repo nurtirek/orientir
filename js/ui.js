@@ -347,8 +347,29 @@
     var link = document.createElement('a');
     link.href = url;
     link.download = name;
+    link.rel = 'noopener';
+    /* ссылка обязана быть в документе: Safari и Firefox игнорируют
+       клик по элементу, которого нет на странице */
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  /* запасной путь, если браузер режет скачивание на file:// */
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(area);
+    return Promise.resolve();
   }
 
   function init() {
@@ -366,7 +387,15 @@
     });
 
     document.getElementById('exportBtn').addEventListener('click', function () {
-      download(Store.exportName(), Model.serialize(state.data));
+      var name = Store.exportName();
+      download(name, Model.serialize(state.data));
+      notice('Копия сохранена: ' + name + '. Ищите её в Загрузках. Если файла там нет — нажмите «Скопировать данные».');
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', function () {
+      copyToClipboard(Model.serialize(state.data)).then(function () {
+        notice('Данные скопированы в буфер. Вставьте их куда нужно.');
+      });
     });
     var input = document.getElementById('importInput');
     document.getElementById('importBtn').addEventListener('click', function () { input.click(); });
