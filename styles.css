@@ -702,7 +702,8 @@ button { -webkit-tap-highlight-color: transparent; }
 #notice[hidden] { display: none; }
 #notice .link { flex: none; }
 
-@media (max-width: 1100px) {
+/* ниже этой ширины календарь налезает на ряд сфер — прячем его под кнопку */
+@media (max-width: 1340px) {
   #calendar { display: none; }
   #calendar.shown { display: block; }
 }
