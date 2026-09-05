@@ -10,6 +10,7 @@
     data: null,
     sphereId: null,
     report: false,
+    nextOpen: false,
     dayOpen: false,
     month: null,
     day: null,
@@ -70,11 +71,11 @@
 
   /* ── состояние ──────────────────────────────────────────────── */
 
-  function update(next, focus) {
+  function update(next, focus, quiet) {
     state.data = next;
     state.focus = focus || null;
     root.Store.save(state.storage, state.data);
-    render();
+    render(quiet);
   }
 
   function open(sphereId) {
@@ -109,10 +110,10 @@
 
   /* ── отрисовка ──────────────────────────────────────────────── */
 
-  function render() {
-    renderSoon();
+  function render(skipPanel) {
+    renderNext();
     renderDocks();
-    renderPanel();
+    if (!skipPanel) renderPanel();
     root.Calendar.render({
       data: state.data,
       month: state.month,
@@ -123,29 +124,74 @@
     state.focus = null;
   }
 
-  function renderSoon() {
+  function groupOf(task, today) {
+    if (task.due < today) return 'Просрочено';
+    if (task.due === today) return 'Сегодня';
+    if (task.due === root.Stats.plus(today)) return 'Завтра';
+    return 'Дальше';
+  }
+
+  function renderNext() {
     const e = el();
     const host = document.getElementById('soon');
     root.Dom.clear(host);
 
     const today = root.Model.today();
-    const list = root.Stats.upcoming(state.data, today, 3);
-    if (list.length === 0) return;
+    const list = root.Stats.upcoming(state.data, today, 7);
+    if (list.length === 0) {
+      state.nextOpen = false;
+      return;
+    }
+
+    const first = list[0];
+    const said = humanSpan(first, today);
+    const sphere = root.Model.sphere(first.sphereId);
+
+    const line = e('button', {
+      class: 'next' + (said.late ? ' late' : ''),
+      type: 'button',
+      style: '--sphere:' + sphere.color,
+      'aria-expanded': state.nextOpen ? 'true' : 'false',
+      onclick: ev => {
+        ev.stopPropagation();
+        state.nextOpen = !state.nextOpen;
+        render(true);
+      }
+    }, [
+      e('i', {}),
+      e('b', { text: first.title }),
+      e('em', { text: said.text }),
+      list.length > 1 ? e('span', { class: 'more', text: '+' + (list.length - 1) }) : null
+    ]);
+
+    host.appendChild(line);
+
+    if (!state.nextOpen || list.length < 2) return;
+
+    const pop = e('div', { class: 'next-pop', onclick: ev => ev.stopPropagation() });
+    let group = null;
 
     for (const task of list) {
-      const said = humanDue(task.due, today);
-      const sphere = root.Model.sphere(task.sphereId);
-      host.appendChild(e('button', {
-        class: 'soon-item' + (said.late ? ' late' : ''),
+      const name = groupOf(task, today);
+      if (name !== group) {
+        group = name;
+        pop.appendChild(e('p', { class: 'next-group', text: name }));
+      }
+      const item = humanSpan(task, today);
+      const color = root.Model.sphere(task.sphereId).color;
+      pop.appendChild(e('button', {
+        class: 'next-item' + (item.late ? ' late' : ''),
         type: 'button',
-        style: '--sphere:' + sphere.color,
-        onclick: () => open(task.sphereId)
+        style: '--sphere:' + color,
+        onclick: () => { state.nextOpen = false; open(task.sphereId); }
       }, [
         e('i', {}),
         e('b', { text: task.title }),
-        e('em', { text: said.text })
+        e('em', { text: item.text })
       ]));
     }
+
+    host.appendChild(pop);
   }
 
   function renderDocks() {
@@ -322,7 +368,14 @@
       render();
     });
 
+    document.addEventListener('click', () => {
+      if (!state.nextOpen) return;
+      state.nextOpen = false;
+      render(true);
+    });
+
     document.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape' && state.nextOpen) { state.nextOpen = false; render(true); return; }
       if (ev.key === 'Escape' && (state.sphereId || state.report || state.dayOpen)) close();
     });
 

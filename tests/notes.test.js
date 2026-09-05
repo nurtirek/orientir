@@ -104,3 +104,16 @@ test('вывод недели говорит о состоянии словам�
   const строки = Stats.summary(data, '2026-09-05');
   assert.ok(строки.some(s => s.indexOf('остояние') !== -1), строки.join(' | '));
 });
+
+test('за неделю собирается дневник: только непустые заметки, свежие сверху', () => {
+  let data = пустые();
+  data = Model.setNote(data, '2026-09-05', { text: 'Сегодня', mood: 5 });
+  data = Model.setNote(data, '2026-09-02', { text: 'Во вторник', mood: 3 });
+  data = Model.setNote(data, '2026-09-03', { mood: 4 });
+  data = Model.setNote(data, '2026-08-20', { text: 'Давно', mood: 1 });
+
+  const дневник = Stats.weekReport(data, '2026-09-05').diary;
+  assert.deepStrictEqual(дневник.map(n => n.date), ['2026-09-05', '2026-09-02']);
+  assert.strictEqual(дневник[0].text, 'Сегодня');
+  assert.strictEqual(дневник[0].mood, 5);
+});

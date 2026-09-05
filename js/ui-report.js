@@ -44,6 +44,25 @@
       }
     }
 
+    if (неделя.diary.length > 0) {
+      host.appendChild(e('p', { class: 'sub', text: 'Дневник' }));
+      for (const запись of неделя.diary) {
+        const состояние = root.Model.mood(запись.mood);
+        host.appendChild(e('button', {
+          class: 'diary',
+          type: 'button',
+          onclick: () => root.UI.openDay(запись.date)
+        }, [
+          e('div', { class: 'diary-head' }, [
+            состояние ? e('i', { style: 'background:' + состояние.color }) : null,
+            e('em', { text: root.UI.longDate(запись.date) }),
+            состояние ? e('span', { text: состояние.name }) : null
+          ]),
+          e('p', { text: запись.text })
+        ]));
+      }
+    }
+
     host.appendChild(e('p', { class: 'sub', text: 'Сегодня' }));
     host.appendChild(todayBlock(день));
   }

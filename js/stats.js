@@ -151,6 +151,8 @@
 
   /* ── итоги дня и недели ─────────────────────────────────────── */
 
+  function plus(date) { return shiftDate(date, 1); }
+
   function shiftDate(date, delta) {
     const d = new Date(Date.UTC(
       Number(date.slice(0, 4)),
@@ -219,15 +221,20 @@
     }
 
     const moods = [];
+    const diary = [];
     for (const day of byDay) {
       const note = Model.note(data, day.date);
-      if (note && note.mood) moods.push(note.mood);
+      if (!note) continue;
+      if (note.mood) moods.push(note.mood);
+      if (note.text) diary.push({ date: day.date, text: note.text, mood: note.mood });
     }
+    diary.reverse();   /* свежие записи сверху */
 
     return {
       from: from,
       to: to,
       mood: moods.length ? Math.round(moods.reduce((a, b) => a + b, 0) / moods.length) : null,
+      diary: diary,
       moodDays: moods.length,
       done: done.length,
       bySphere: bySphere,
@@ -288,7 +295,7 @@
   const Stats = {
     plural, fill, label, tasksOn, overdue, upcoming,
     monthBars, monthGrid, monthTitle, shiftMonth, MONTHS,
-    shiftDate, dayReport, weekReport, summary
+    shiftDate, plus, dayReport, weekReport, summary
   };
 
   if (isNode) module.exports = Stats;

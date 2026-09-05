@@ -8,8 +8,9 @@
     const день = root.Stats.dayReport(ctx.data, ctx.date);
     const заметка = день.note || { text: '', mood: null };
 
-    host.appendChild(moods(заметка, ctx));
-    host.appendChild(note(заметка, ctx));
+    const блокЗаметки = note(заметка, ctx);
+    host.appendChild(moods(заметка, ctx, блокЗаметки.field));
+    host.appendChild(блокЗаметки.box);
 
     if (день.done.length > 0) {
       host.appendChild(e('p', { class: 'sub', text: 'Сделал' }));
@@ -45,7 +46,7 @@
     }
   }
 
-  function moods(заметка, ctx) {
+  function moods(заметка, ctx, field) {
     const e = el();
     const выбран = root.Model.mood(заметка.mood);
 
@@ -56,9 +57,11 @@
       'aria-label': 'Состояние: ' + m.name,
       'aria-pressed': заметка.mood === m.value ? 'true' : 'false',
       style: '--mood:' + m.color,
-      onclick: () => ctx.update(root.Model.setNote(
-        ctx.data, ctx.date, { mood: заметка.mood === m.value ? null : m.value }
-      ))
+      /* забираем недописанный текст из поля, иначе перерисовка его потеряет */
+      onclick: () => ctx.update(root.Model.setNote(ctx.data, ctx.date, {
+        mood: заметка.mood === m.value ? null : m.value,
+        text: field.value
+      }))
     }));
 
     return e('div', { class: 'moods' }, [
@@ -67,22 +70,48 @@
     ]);
   }
 
+  /* заметка пишется без кнопок: текст уезжает в хранилище через
+     полсекунды после последней буквы, поле растёт вместе с текстом */
   function note(заметка, ctx) {
     const e = el();
+
     const field = e('textarea', {
       class: 'note',
-      rows: '3',
-      placeholder: 'Что было в этот день',
-      value: заметка.text
+      rows: '2',
+      placeholder: 'Как прошёл день, что мешало, что получилось'
     });
-
     field.value = заметка.text;
-    field.addEventListener('blur', () => {
-      if (field.value.trim() === заметка.text) return;
-      ctx.update(root.Model.setNote(ctx.data, ctx.date, { text: field.value }));
+
+    const mark = e('span', { class: 'saved', text: '' });
+
+    function grow() {
+      field.style.height = 'auto';
+      field.style.height = Math.max(72, field.scrollHeight) + 'px';
+    }
+
+    let timer = null;
+    let saved = заметка.text;
+
+    function store() {
+      if (field.value.trim() === saved) return;
+      saved = field.value.trim();
+      /* тихо: панель не перерисовываем, чтобы не выбить курсор из поля */
+      ctx.update(root.Model.setNote(ctx.data, ctx.date, { text: field.value }), null, true);
+      mark.textContent = 'сохранено';
+      setTimeout(() => { mark.textContent = ''; }, 1600);
+    }
+
+    field.addEventListener('input', () => {
+      grow();
+      clearTimeout(timer);
+      timer = setTimeout(store, 500);
     });
 
-    return field;
+    field.addEventListener('blur', () => { clearTimeout(timer); store(); });
+
+    setTimeout(grow, 0);
+
+    return { box: e('div', { class: 'note-box' }, [field, mark]), field: field };
   }
 
   function list(tasks, ctx, done) {
