@@ -10,6 +10,7 @@
     data: null,
     sphereId: null,
     report: false,
+    dayOpen: false,
     month: null,
     day: null,
     focus: null,
@@ -79,19 +80,30 @@
   function open(sphereId) {
     state.sphereId = sphereId;
     state.report = false;
+    state.dayOpen = false;
     state.focus = null;
     render();
   }
 
   function openReport() {
     state.sphereId = null;
+    state.dayOpen = false;
     state.report = true;
+    render();
+  }
+
+  function openDay(date) {
+    state.sphereId = null;
+    state.report = false;
+    state.day = date;
+    state.dayOpen = !!date;
     render();
   }
 
   function close() {
     state.sphereId = null;
     state.report = false;
+    state.dayOpen = false;
     render();
   }
 
@@ -105,9 +117,9 @@
       data: state.data,
       month: state.month,
       day: state.day,
-      pick: date => { state.day = date; render(); }
+      pick: date => openDay(date)
     });
-    if (root.City) root.City.update(state.data, state.sphereId, state.report);
+    if (root.City) root.City.update(state.data, state.sphereId, state.report || state.dayOpen);
     state.focus = null;
   }
 
@@ -167,6 +179,23 @@
   function renderPanel() {
     const panel = document.getElementById('panel');
     const body = document.getElementById('panel-body');
+
+    if (state.dayOpen && state.day) {
+      const today = root.Model.today();
+      panel.hidden = false;
+      panel.style.setProperty('--sphere', '#7c8cff');
+      document.getElementById('panel-title').textContent = longDate(state.day);
+      document.getElementById('panel-note').textContent =
+        state.day === today ? 'Сегодня' : (state.day > today ? 'Впереди' : 'Прошедший день');
+      root.Dom.clear(body);
+      root.PanelDay.render(body, {
+        data: state.data,
+        date: state.day,
+        future: state.day > today,
+        update: update
+      });
+      return;
+    }
 
     if (state.report) {
       panel.hidden = false;
@@ -294,7 +323,7 @@
     });
 
     document.addEventListener('keydown', ev => {
-      if (ev.key === 'Escape' && (state.sphereId || state.report)) close();
+      if (ev.key === 'Escape' && (state.sphereId || state.report || state.dayOpen)) close();
     });
 
     if (archive) {
@@ -338,7 +367,7 @@
     if (loaded.warning) notice(loaded.warning);
   }
 
-  root.UI = { init, open, openReport, close, update, humanDue, humanSpan, shortRange, shortDate, longDate, daysBetween,
+  root.UI = { init, open, openReport, openDay, close, update, humanDue, humanSpan, shortRange, shortDate, longDate, daysBetween,
     data: () => state.data, selected: () => state.sphereId };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

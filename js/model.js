@@ -13,12 +13,26 @@
 
   const TASK_SPHERES = SPHERES.filter(s => s.kind === 'tasks').map(s => s.id);
 
+  /* состояние дня: пять ступеней от тяжёлого к отличному */
+  const MOODS = [
+    { value: 1, name: 'тяжело',   color: '#d2453a' },
+    { value: 2, name: 'так себе', color: '#e08b2f' },
+    { value: 3, name: 'обычно',   color: '#98a2b5' },
+    { value: 4, name: 'хорошо',   color: '#4f9dd8' },
+    { value: 5, name: 'отлично',  color: '#1f9d63' }
+  ];
+
+  function mood(value) {
+    return MOODS.find(m => m.value === value) || null;
+  }
+
   const DEFAULT_DATA = {
     version: VERSION,
     updatedAt: null,
     tasks: [],
     workouts: [],
-    money: { goal: 0, entries: [] }
+    money: { goal: 0, entries: [] },
+    notes: {}
   };
 
   let counter = 0;
@@ -97,6 +111,20 @@
       }
     }
 
+    /* заметки появились позже задач, у старых записей раздела может не быть */
+    if (data.notes !== undefined && data.notes !== null) {
+      if (typeof data.notes !== 'object' || Array.isArray(data.notes)) {
+        return { ok: false, error: 'Заметки дней испорчены' };
+      }
+      for (const date of Object.keys(data.notes)) {
+        const note = data.notes[date];
+        if (!isDate(date)) return { ok: false, error: 'У заметки неверная дата: ' + date };
+        if (!note || typeof note !== 'object') return { ok: false, error: 'Заметка дня не объект: ' + date };
+        if (typeof note.text !== 'string') return { ok: false, error: 'В заметке нет текста: ' + date };
+        if (note.mood !== null && !mood(note.mood)) return { ok: false, error: 'Неверное состояние дня: ' + date };
+      }
+    }
+
     for (const entry of data.money.entries) {
       if (!entry || !isDate(entry.date)) return { ok: false, error: 'У операции нет даты' };
       if (['spend', 'income', 'save'].indexOf(entry.kind) === -1) {
@@ -117,6 +145,7 @@
     } catch (e) {
       return { ok: false, error: 'Не удалось разобрать файл' };
     }
+    if (raw && typeof raw === 'object' && !raw.notes) raw.notes = {};
     return validate(raw);
   }
 
@@ -206,6 +235,29 @@
     return next;
   }
 
+  function note(data, date) {
+    const found = data.notes ? data.notes[date] : null;
+    return found || null;
+  }
+
+  /* заметка дня: текст и состояние. Пустая заметка стирается,
+     чтобы в данных не копились дни, о которых нечего сказать */
+  function setNote(data, date, patch) {
+    const next = clone(data);
+    if (!next.notes) next.notes = {};
+    if (!isDate(date)) return next;
+
+    const now = next.notes[date] || { text: '', mood: null };
+    const text = patch && patch.text !== undefined ? String(patch.text).trim() : now.text;
+    const value = patch && patch.mood !== undefined ? patch.mood : now.mood;
+    const clean = mood(value) ? value : null;
+
+    if (!text && clean === null) delete next.notes[date];
+    else next.notes[date] = { text: text, mood: clean };
+
+    return next;
+  }
+
   function tasksOf(data, sphereId) {
     /* сначала несделанные: со сроком по возрастанию, без срока в конце;
        сделанные всегда внизу */
@@ -222,7 +274,7 @@
   }
 
   const Model = {
-    VERSION, SPHERES, TASK_SPHERES, DEFAULT_DATA,
+    VERSION, SPHERES, TASK_SPHERES, DEFAULT_DATA, MOODS, mood, note, setNote,
     createId, isDate, today, sphere, clone,
     validate, parse, serialize,
     addTask, findTask, toggleTask, editTaskTitle, editTaskDue, editTaskStart, removeTask, tasksOf, coversDay

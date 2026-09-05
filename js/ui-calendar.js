@@ -7,11 +7,10 @@
   function render(ctx) {
     const e = el();
     const grid = document.getElementById('cal-grid');
-    const dayBox = document.getElementById('cal-day');
+
     document.getElementById('cal-title').textContent = root.Stats.monthTitle(ctx.month);
 
     root.Dom.clear(grid);
-    root.Dom.clear(dayBox);
 
     for (const wd of WEEKDAYS) grid.appendChild(e('div', { class: 'wd', text: wd }));
 
@@ -38,6 +37,9 @@
           }
         }
 
+        const заметка = root.Model.note(ctx.data, date);
+        const состояние = заметка ? root.Model.mood(заметка.mood) : null;
+
         const cell = e('button', {
           class: 'day' + (date === today ? ' today' : ''),
           type: 'button',
@@ -45,6 +47,10 @@
           onclick: () => ctx.pick(date === ctx.day ? null : date)
         }, [
           e('span', { text: String(Number(date.slice(8, 10))) }),
+          заметка ? e('u', {
+            class: 'noted',
+            style: 'background:' + (состояние ? состояние.color : 'var(--line-strong)')
+          }) : null,
           dots
         ]);
 
@@ -54,25 +60,7 @@
       }
     }
 
-    if (!ctx.day) return;
-
-    const tasks = root.Stats.tasksOn(ctx.data, ctx.day);
-    if (tasks.length === 0) {
-      dayBox.appendChild(e('div', { class: 'cal-task' }, [
-        e('b', { text: root.UI.longDate(ctx.day) + ' — свободно' })
-      ]));
-      return;
-    }
-
-    for (const task of tasks) {
-      dayBox.appendChild(e('div', {
-        class: 'cal-task' + (task.done ? ' done' : ''),
-        onclick: () => root.UI.open(task.sphereId)
-      }, [
-        e('i', { style: 'background:' + root.Model.sphere(task.sphereId).color }),
-        e('b', { text: task.title })
-      ]));
-    }
+    /* подробности дня живут в боковой панели, здесь только сетка */
   }
 
   root.Calendar = { render };

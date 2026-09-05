@@ -170,6 +170,8 @@
     return {
       date: date,
       done: data.tasks.filter(t => t.done && t.doneAt === date),
+      open: data.tasks.filter(t => !t.done && Model.coversDay(t, date)),
+      note: Model.note(data, date),
       workouts: data.workouts.filter(w => w.date === date),
       spent: moneyOn(data, 'spend', date, date),
       saved: moneyOn(data, 'save', date, date),
@@ -216,9 +218,17 @@
       if (weekTop >= allTop) records.push({ exercise: workout.exercise, weight: weekTop });
     }
 
+    const moods = [];
+    for (const day of byDay) {
+      const note = Model.note(data, day.date);
+      if (note && note.mood) moods.push(note.mood);
+    }
+
     return {
       from: from,
       to: to,
+      mood: moods.length ? Math.round(moods.reduce((a, b) => a + b, 0) / moods.length) : null,
+      moodDays: moods.length,
       done: done.length,
       bySphere: bySphere,
       workouts: workouts.length,
@@ -260,6 +270,11 @@
     if (week.bySphere.length > 0) {
       const top = week.bySphere[0];
       lines.push('Больше всего — ' + top.name + ': ' + top.count + '.');
+    }
+
+    if (week.mood) {
+      const слово = Model.mood(week.mood).name;
+      lines.push('Состояние за неделю — ' + слово + '.');
     }
 
     if (week.overdue > 0) {

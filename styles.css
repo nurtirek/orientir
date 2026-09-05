@@ -674,9 +674,6 @@ button { -webkit-tap-highlight-color: transparent; }
 .dots i { width: 4px; height: 4px; border-radius: 50%; }
 
 
-#cal-day { margin-top: 12px; }
-#cal-day:empty { display: none; }
-
 .cal-task { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; }
 .cal-task i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
 .cal-task b { font-weight: 400; }
@@ -729,3 +726,62 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ── состояние и заметка дня ───────────────────────────────────── */
+
+.moods {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mood-row { display: flex; gap: 7px; }
+
+.mood {
+  width: 26px; height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mood);
+  opacity: 0.28;
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.12s ease-out;
+}
+
+.mood:hover { opacity: 0.65; }
+.mood:active { transform: scale(0.9); }
+.mood.on { opacity: 1; transform: scale(1.1); }
+
+.mood-name { font-size: 13px; color: var(--faint); }
+
+.note {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+  min-height: 76px;
+}
+
+.note::placeholder { color: var(--faint); }
+
+.note:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sphere) 45%, transparent);
+}
+
+/* точка состояния в углу дня */
+.day .noted {
+  position: absolute;
+  top: 4px; right: 5px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.day[aria-pressed="true"] .noted { box-shadow: 0 0 0 1.5px var(--ink); }
