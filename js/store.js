@@ -1,7 +1,10 @@
 (function (root) {
   'use strict';
 
-  const KEY = 'wishmap-v1';
+  const KEY = 'orientir-v2';
+  const OLD_KEY = 'wishmap-v1';
+  const ARCHIVE_KEY = 'wishmap-v1-archive';
+
   const Model = (typeof module !== 'undefined' && module.exports)
     ? require('./model.js')
     : root.Model;
@@ -16,29 +19,46 @@
     }
   }
 
+  function archiveOld(storage) {
+    /* прежняя карта желаний не выбрасывается: она уезжает в отдельный ключ,
+       и страница один раз предлагает скачать её файлом */
+    try {
+      const старое = storage.getItem(OLD_KEY);
+      if (!старое) return null;
+      if (!storage.getItem(ARCHIVE_KEY)) storage.setItem(ARCHIVE_KEY, старое);
+      storage.removeItem(OLD_KEY);
+      return старое;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function fresh(warning, archive) {
+    return {
+      data: Model.clone(Model.DEFAULT_DATA),
+      source: 'default',
+      warning: warning || null,
+      archive: archive || null
+    };
+  }
+
   function load(storage) {
+    let archive = null;
     let raw = null;
     try {
+      archive = archiveOld(storage);
       raw = storage.getItem(KEY);
     } catch (e) {
-      return {
-        data: Model.clone(Model.DEFAULT_DATA),
-        source: 'default',
-        warning: 'Браузер не даёт сохранять на этой странице. Правки не переживут перезагрузку — пользуйтесь кнопкой «Сохранить копию».'
-      };
+      return fresh('Браузер не даёт сохранять на этой странице. Правки не переживут перезагрузку — пользуйтесь кнопкой «Сохранить копию».', null);
     }
-    if (!raw) {
-      return { data: Model.clone(Model.DEFAULT_DATA), source: 'default', warning: null };
-    }
+
+    if (!raw) return fresh(null, archive);
+
     const res = Model.parse(raw);
     if (!res.ok) {
-      return {
-        data: Model.clone(Model.DEFAULT_DATA),
-        source: 'default',
-        warning: 'Сохранённые данные повреждены: ' + res.error + '. Открыт стартовый набор.'
-      };
+      return fresh('Сохранённые данные повреждены: ' + res.error + '. Открыт чистый лист.', archive);
     }
-    return { data: res.data, source: 'storage', warning: null };
+    return { data: res.data, source: 'storage', warning: null, archive: archive };
   }
 
   function save(storage, data) {
@@ -52,11 +72,10 @@
 
   function exportName(date) {
     const d = date || new Date();
-    const iso = d.toISOString().slice(0, 10);
-    return 'plans-' + iso + '.json';
+    return 'orientir-' + d.toISOString().slice(0, 10) + '.json';
   }
 
-  const Store = { KEY, available, load, save, exportName };
+  const Store = { KEY, OLD_KEY, ARCHIVE_KEY, available, load, save, exportName };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Store;
   else root.Store = Store;

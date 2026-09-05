@@ -1,31 +1,24 @@
 (function (root) {
   'use strict';
 
-  const HORIZONS = [3, 6, 12];
-  const VERSION = 1;
+  const VERSION = 2;
+
+  const SPHERES = [
+    { id: 'work',   name: 'Работа',  color: '#4f7cff', kind: 'tasks' },
+    { id: 'gym',    name: 'Зал',     color: '#ff6b4a', kind: 'gym'   },
+    { id: 'social', name: 'Соцсети', color: '#c463ff', kind: 'tasks' },
+    { id: 'study',  name: 'Учёба',   color: '#25c2a0', kind: 'tasks' },
+    { id: 'money',  name: 'Деньги',  color: '#f2b134', kind: 'money' }
+  ];
+
+  const TASK_SPHERES = SPHERES.filter(s => s.kind === 'tasks').map(s => s.id);
 
   const DEFAULT_DATA = {
     version: VERSION,
     updatedAt: null,
-    areas: [
-      { id: 'money', name: 'Деньги' },
-      { id: 'health', name: 'Здоровье' },
-      { id: 'skills', name: 'Навыки' },
-      { id: 'people', name: 'Отношения' },
-      { id: 'home', name: 'Дом' }
-    ],
-    dreams: [
-      { id: 'd1', title: 'Резиденция в горах',      note: 'Камень, свет и тишина',            image: 'rezidenciya-v-gorah.jpg' },
-      { id: 'd2', title: 'Квартира с панорамой',    note: 'Город во всю стену',               image: 'kvartira-s-panoramoy.jpg' },
-      { id: 'd3', title: 'Дом в тихом квартале',    note: 'Зелень под окнами, свои дворы',    image: 'dom-v-tihom-kvartale.jpg' },
-      { id: 'd4', title: 'Forbes 30 под 30',        note: 'Попасть в список до тридцати',     image: 'forbes.jpg' },
-      { id: 'd5', title: 'Капитал',                 note: 'Деньги, которые работают сами',    image: 'kapital.jpg' },
-      { id: 'd6', title: 'Genesis G80',             note: 'Первая своя машина',               image: 'genesis-g80.jpg' },
-      { id: 'd7', title: 'Гелендваген',             note: 'Чёрный, без компромиссов',         image: 'gelendvagen.jpg' },
-      { id: 'd8', title: 'Электроседан',            note: 'Тихий и быстрый',                  image: 'elektrosedan.jpg' },
-      { id: 'd9', title: 'Форма',                   note: 'Сухой вес и выносливость',         image: 'forma.jpg' }
-    ],
-    goals: []
+    tasks: [],
+    workouts: [],
+    money: { goal: 0, entries: [] }
   };
 
   let counter = 0;
@@ -34,25 +27,79 @@
     return prefix + Date.now().toString(36) + counter.toString(36);
   }
 
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  function isDate(value) {
+    return typeof value === 'string' && DATE_RE.test(value);
+  }
+
+  function today(now) {
+    /* по местному времени, не по UTC: иначе всё, что заведено ночью,
+       помечается вчерашним днём в часовых поясах восточнее Гринвича */
+    const d = now || new Date();
+    const m = String(d.getMonth() + 1);
+    const day = String(d.getDate());
+    return d.getFullYear() + '-' + (m.length < 2 ? '0' + m : m) + '-' + (day.length < 2 ? '0' + day : day);
+  }
+
+  function sphere(id) {
+    return SPHERES.find(s => s.id === id) || null;
+  }
+
+  function clone(data) {
+    return JSON.parse(JSON.stringify(data));
+  }
+
   function validate(data) {
     if (!data || typeof data !== 'object') return { ok: false, error: 'Данные не объект' };
     if (data.version !== VERSION) return { ok: false, error: 'Другая версия данных' };
-    if (!Array.isArray(data.areas)) return { ok: false, error: 'Нет списка сфер' };
-    if (!Array.isArray(data.dreams)) return { ok: false, error: 'Нет списка мечт' };
-    if (!Array.isArray(data.goals)) return { ok: false, error: 'Нет списка целей' };
+    if (!Array.isArray(data.tasks)) return { ok: false, error: 'Нет списка задач' };
+    if (!Array.isArray(data.workouts)) return { ok: false, error: 'Нет списка тренировок' };
+    if (!data.money || typeof data.money !== 'object') return { ok: false, error: 'Нет раздела денег' };
+    if (!Array.isArray(data.money.entries)) return { ok: false, error: 'Нет списка операций' };
+    if (typeof data.money.goal !== 'number' || data.money.goal < 0) {
+      return { ok: false, error: 'Неверная цель накопления' };
+    }
 
-    const areaIds = new Set(data.areas.map(a => a.id));
-    for (const goal of data.goals) {
-      if (!HORIZONS.includes(goal.horizon)) {
-        return { ok: false, error: 'Недопустимый горизонт у цели: ' + goal.title };
+    for (const task of data.tasks) {
+      if (!task || typeof task.title !== 'string' || !task.title.trim()) {
+        return { ok: false, error: 'У задачи нет названия' };
       }
-      if (!areaIds.has(goal.areaId)) {
-        return { ok: false, error: 'Цель ссылается на несуществующую сферу: ' + goal.title };
+      if (TASK_SPHERES.indexOf(task.sphereId) === -1) {
+        return { ok: false, error: 'Задача в чужой сфере: ' + task.title };
       }
-      if (typeof goal.startedAt !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(goal.startedAt)) {
-        return { ok: false, error: 'У цели нет даты старта: ' + goal.title };
+      if (task.due !== null && !isDate(task.due)) {
+        return { ok: false, error: 'Неверный срок у задачи: ' + task.title };
+      }
+      if (typeof task.done !== 'boolean') {
+        return { ok: false, error: 'У задачи нет отметки о выполнении: ' + task.title };
       }
     }
+
+    for (const workout of data.workouts) {
+      if (!workout || !isDate(workout.date)) return { ok: false, error: 'У тренировки нет даты' };
+      if (typeof workout.exercise !== 'string' || !workout.exercise.trim()) {
+        return { ok: false, error: 'У тренировки нет упражнения' };
+      }
+      if (!Array.isArray(workout.sets) || workout.sets.length === 0) {
+        return { ok: false, error: 'У тренировки нет подходов: ' + workout.exercise };
+      }
+      for (const set of workout.sets) {
+        if (!set || !(set.weight > 0) || !(set.reps > 0)) {
+          return { ok: false, error: 'Неверный подход: ' + workout.exercise };
+        }
+      }
+    }
+
+    for (const entry of data.money.entries) {
+      if (!entry || !isDate(entry.date)) return { ok: false, error: 'У операции нет даты' };
+      if (['spend', 'income', 'save'].indexOf(entry.kind) === -1) {
+        return { ok: false, error: 'Неизвестный вид операции' };
+      }
+      if (!Number.isFinite(entry.amount) || entry.amount <= 0) {
+        return { ok: false, error: 'Неверная сумма операции' };
+      }
+    }
+
     return { ok: true, data: data };
   }
 
@@ -71,190 +118,82 @@
     return JSON.stringify(copy, null, 2);
   }
 
-  function children(node) {
-    return Array.isArray(node.tasks) ? node.tasks : [];
+  function cleanDue(due) {
+    const value = String(due == null ? '' : due).trim();
+    return isDate(value) ? value : null;
   }
 
-  function isDone(node) {
-    const kids = children(node);
-    if (kids.length === 0) return node.done === true;
-    return kids.every(isDone);
-  }
-
-  function progress(node) {
-    const kids = children(node);
-    if (kids.length === 0) return null;
-    return { done: kids.filter(isDone).length, total: kids.length };
-  }
-
-  function canToggle(node) {
-    return children(node).length === 0;
-  }
-
-  function findNode(data, id) {
-    function walk(nodes) {
-      for (const node of nodes) {
-        if (node.id === id) return node;
-        const found = walk(children(node));
-        if (found) return found;
-      }
-      return null;
-    }
-    return walk(data.goals);
-  }
-
-  function clone(data) {
-    return JSON.parse(JSON.stringify(data));
-  }
-
-  function toggle(data, id) {
+  function addTask(data, sphereId, title, due) {
     const next = clone(data);
-    const node = findNode(next, id);
-    if (!node || !canToggle(node)) return next;
-    node.done = !node.done;
-    return next;
-  }
-
-  const MAX_DEPTH = 2;
-
-  function today(now) {
-    /* по местному времени, не по UTC: иначе всё, что заведено ночью,
-       помечается вчерашним днём в часовых поясах восточнее Гринвича */
-    var d = now || new Date();
-    var m = String(d.getMonth() + 1);
-    var day = String(d.getDate());
-    return d.getFullYear() + '-' + (m.length < 2 ? '0' + m : m) + '-' + (day.length < 2 ? '0' + day : day);
-  }
-
-  function depthOf(data, id) {
-    function walk(nodes, level) {
-      for (const node of nodes) {
-        if (node.id === id) return level;
-        const found = walk(children(node), level + 1);
-        if (found !== -1) return found;
-      }
-      return -1;
-    }
-    return walk(data.goals, 0);
-  }
-
-  function addGoal(data, opts) {
-    const next = clone(data);
-    const title = String(opts.title || '').trim();
-    const areaExists = next.areas.some(a => a.id === opts.areaId);
-    if (!title || !HORIZONS.includes(opts.horizon) || !areaExists) {
-      return { data: next, id: null };
-    }
-    const goal = {
-      id: createId('g'), title: title, areaId: opts.areaId,
-      horizon: opts.horizon,
-      start: String(opts.start || '').trim(),
-      startedAt: today(),
-      done: false, tasks: []
+    const clean = String(title || '').trim();
+    if (!clean || TASK_SPHERES.indexOf(sphereId) === -1) return { data: next, id: null };
+    const task = {
+      id: createId('t'),
+      sphereId: sphereId,
+      title: clean,
+      due: cleanDue(due),
+      done: false,
+      createdAt: today(),
+      doneAt: null
     };
-    next.goals.push(goal);
-    return { data: next, id: goal.id };
+    next.tasks.push(task);
+    return { data: next, id: task.id };
   }
 
-  function addTask(data, parentId, title) {
+  function findTask(data, id) {
+    return data.tasks.find(t => t.id === id) || null;
+  }
+
+  function toggleTask(data, id) {
     const next = clone(data);
+    const task = findTask(next, id);
+    if (!task) return next;
+    task.done = !task.done;
+    task.doneAt = task.done ? today() : null;
+    return next;
+  }
+
+  function editTaskTitle(data, id, title) {
+    const next = clone(data);
+    const task = findTask(next, id);
     const clean = String(title || '').trim();
-    const parent = findNode(next, parentId);
-    if (!clean || !parent) return { data: next, id: null };
-    if (depthOf(next, parentId) >= MAX_DEPTH) return { data: next, id: null };
-    const node = { id: createId('t'), title: clean, done: false, tasks: [] };
-    parent.tasks.push(node);
-    return { data: next, id: node.id };
-  }
-
-  function editStart(data, goalId, start) {
-    const next = clone(data);
-    const goal = next.goals.find(g => g.id === goalId);
-    if (goal) goal.start = String(start == null ? '' : start).trim();
+    if (task && clean) task.title = clean;
     return next;
   }
 
-  function editTitle(data, id, title) {
+  function editTaskDue(data, id, due) {
     const next = clone(data);
-    const clean = String(title || '').trim();
-    const node = findNode(next, id);
-    if (node && clean) node.title = clean;
+    const task = findTask(next, id);
+    if (task) task.due = cleanDue(due);
     return next;
   }
 
-  function removeNode(data, id) {
+  function removeTask(data, id) {
     const next = clone(data);
-    function strip(list) {
-      const index = list.findIndex(n => n.id === id);
-      if (index !== -1) { list.splice(index, 1); return true; }
-      return list.some(n => strip(children(n)));
-    }
-    strip(next.goals);
+    next.tasks = next.tasks.filter(t => t.id !== id);
     return next;
   }
 
-  function goalsFor(data, horizon, areaId) {
-    return data.goals
-      .filter(g => g.horizon === horizon && g.areaId === areaId)
+  function tasksOf(data, sphereId) {
+    /* сначала несделанные: со сроком по возрастанию, без срока в конце;
+       сделанные всегда внизу */
+    return data.tasks
+      .filter(t => t.sphereId === sphereId)
       .slice()
-      .sort((a, b) => Number(isDone(a)) - Number(isDone(b)));
-  }
-
-  function addArea(data, name) {
-    const next = clone(data);
-    const clean = String(name || '').trim();
-    if (!clean) return { data: next, id: null };
-    const area = { id: createId('a'), name: clean };
-    next.areas.push(area);
-    return { data: next, id: area.id };
-  }
-
-  function renameArea(data, id, name) {
-    const next = clone(data);
-    const clean = String(name || '').trim();
-    const area = next.areas.find(a => a.id === id);
-    if (area && clean) area.name = clean;
-    return next;
-  }
-
-  function removeArea(data, id) {
-    const next = clone(data);
-    const used = next.goals.some(g => g.areaId === id);
-    if (used) return next;
-    next.areas = next.areas.filter(a => a.id !== id);
-    return next;
-  }
-
-  function addDream(data, title) {
-    const next = clone(data);
-    const clean = String(title || '').trim();
-    if (!clean) return { data: next, id: null };
-    const dream = { id: createId('d'), title: clean, note: '', image: null };
-    next.dreams.push(dream);
-    return { data: next, id: dream.id };
-  }
-
-  function editDream(data, id, patch) {
-    const next = clone(data);
-    const dream = next.dreams.find(d => d.id === id);
-    if (!dream) return next;
-    if (typeof patch.title === 'string' && patch.title.trim()) dream.title = patch.title.trim();
-    if (typeof patch.note === 'string') dream.note = patch.note;
-    if (patch.image === null || typeof patch.image === 'string') dream.image = patch.image;
-    return next;
-  }
-
-  function removeDream(data, id) {
-    const next = clone(data);
-    next.dreams = next.dreams.filter(d => d.id !== id);
-    return next;
+      .sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        if (a.due && b.due) return a.due < b.due ? -1 : (a.due > b.due ? 1 : 0);
+        if (a.due) return -1;
+        if (b.due) return 1;
+        return 0;
+      });
   }
 
   const Model = {
-    HORIZONS, VERSION, DEFAULT_DATA, createId, validate, parse, serialize,
-    isDone, progress, canToggle, findNode, clone, toggle,
-    addGoal, addTask, editTitle, editStart, today, removeNode, goalsFor, depthOf,
-    addArea, renameArea, removeArea, addDream, editDream, removeDream
+    VERSION, SPHERES, TASK_SPHERES, DEFAULT_DATA,
+    createId, isDate, today, sphere, clone,
+    validate, parse, serialize,
+    addTask, findTask, toggleTask, editTaskTitle, editTaskDue, removeTask, tasksOf
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Model;
