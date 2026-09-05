@@ -15,16 +15,27 @@
 
     for (const wd of WEEKDAYS) grid.appendChild(e('div', { class: 'wd', text: wd }));
 
-    const marks = root.Stats.monthMarks(ctx.data, ctx.month);
+    const bars = root.Stats.monthBars(ctx.data, ctx.month);
     const today = root.Model.today();
 
     for (const week of root.Stats.monthGrid(ctx.month)) {
       for (const date of week) {
         if (!date) { grid.appendChild(e('div', { class: 'day blank' })); continue; }
 
+        /* период — мягкая заливка через дни, срок — точка под числом */
+        const ranges = [];
         const dots = e('div', { class: 'dots' });
-        for (const sphereId of (marks[date] || [])) {
-          dots.appendChild(e('i', { style: 'background:' + root.Model.sphere(sphereId).color }));
+
+        for (const mark of (bars[date] || [])) {
+          const color = root.Model.sphere(mark.sphereId).color;
+          if (mark.span) {
+            ranges.push(e('div', {
+              class: 'range' + (mark.head ? ' head' : '') + (mark.tail ? ' tail' : ''),
+              style: 'background:' + color
+            }));
+          } else {
+            dots.appendChild(e('i', { style: 'background:' + color }));
+          }
         }
 
         const cell = e('button', {
@@ -36,6 +47,8 @@
           e('span', { text: String(Number(date.slice(8, 10))) }),
           dots
         ]);
+
+        for (const range of ranges) cell.insertBefore(range, cell.firstChild);
 
         grid.appendChild(cell);
       }

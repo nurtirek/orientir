@@ -99,15 +99,6 @@ test('ближайшее: просроченные первыми, затем п
   );
 });
 
-test('метки месяца: по дням список сфер без повторов', () => {
-  let data = пустые();
-  data = Model.addTask(data, 'work', 'Раз', '2026-09-09').data;
-  data = Model.addTask(data, 'work', 'Два', '2026-09-09').data;
-  data = Model.addTask(data, 'study', 'Три', '2026-09-09').data;
-  data = Model.addTask(data, 'social', 'Чужой месяц', '2026-10-01').data;
-  assert.deepStrictEqual(Stats.monthMarks(data, '2026-09'), { '2026-09-09': ['work', 'study'] });
-});
-
 test('сетка месяца начинается с понедельника и добита пустыми клетками', () => {
   const сетка = Stats.monthGrid('2026-09');
   assert.strictEqual(сетка[0].length, 7);

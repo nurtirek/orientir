@@ -70,6 +70,13 @@
       if (task.due !== null && !isDate(task.due)) {
         return { ok: false, error: 'Неверный срок у задачи: ' + task.title };
       }
+      /* start появился позже due, поэтому у старых записей его может не быть */
+      if (task.start !== undefined && task.start !== null) {
+        if (!isDate(task.start)) return { ok: false, error: 'Неверное начало у задачи: ' + task.title };
+        if (!task.due || task.start > task.due) {
+          return { ok: false, error: 'Период задачи кончается раньше, чем начинается: ' + task.title };
+        }
+      }
       if (typeof task.done !== 'boolean') {
         return { ok: false, error: 'У задачи нет отметки о выполнении: ' + task.title };
       }
@@ -123,15 +130,24 @@
     return isDate(value) ? value : null;
   }
 
-  function addTask(data, sphereId, title, due) {
+  /* период живёт только вместе со сроком и не может кончиться раньше начала */
+  function cleanStart(start, due) {
+    const value = cleanDue(start);
+    if (!value || !due || value > due) return null;
+    return value;
+  }
+
+  function addTask(data, sphereId, title, due, start) {
     const next = clone(data);
     const clean = String(title || '').trim();
     if (!clean || TASK_SPHERES.indexOf(sphereId) === -1) return { data: next, id: null };
+    const deadline = cleanDue(due);
     const task = {
       id: createId('t'),
       sphereId: sphereId,
       title: clean,
-      due: cleanDue(due),
+      due: deadline,
+      start: cleanStart(start, deadline),
       done: false,
       createdAt: today(),
       doneAt: null
@@ -164,8 +180,24 @@
   function editTaskDue(data, id, due) {
     const next = clone(data);
     const task = findTask(next, id);
-    if (task) task.due = cleanDue(due);
+    if (!task) return next;
+    task.due = cleanDue(due);
+    task.start = cleanStart(task.start, task.due);
     return next;
+  }
+
+  function editTaskStart(data, id, start) {
+    const next = clone(data);
+    const task = findTask(next, id);
+    if (task) task.start = cleanStart(start, task.due);
+    return next;
+  }
+
+  /* задача занимает день, если это её срок или день внутри периода */
+  function coversDay(task, date) {
+    if (!task.due) return false;
+    if (task.due === date) return true;
+    return !!task.start && task.start <= date && date <= task.due;
   }
 
   function removeTask(data, id) {
@@ -193,7 +225,7 @@
     VERSION, SPHERES, TASK_SPHERES, DEFAULT_DATA,
     createId, isDate, today, sphere, clone,
     validate, parse, serialize,
-    addTask, findTask, toggleTask, editTaskTitle, editTaskDue, removeTask, tasksOf
+    addTask, findTask, toggleTask, editTaskTitle, editTaskDue, editTaskStart, removeTask, tasksOf, coversDay
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Model;

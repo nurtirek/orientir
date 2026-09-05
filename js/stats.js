@@ -67,7 +67,7 @@
   }
 
   function tasksOn(data, date) {
-    return data.tasks.filter(t => t.due === date);
+    return data.tasks.filter(t => Model.coversDay(t, date));
   }
 
   function overdue(data, today) {
@@ -82,14 +82,39 @@
     return limit ? list.slice(0, limit) : list;
   }
 
-  function monthMarks(data, month) {
-    const marks = {};
+  /* метки календаря: точка на срок, полоса на каждый день периода */
+  function monthBars(data, month) {
+    const bars = {};
+
     for (const task of data.tasks) {
-      if (!task.due || task.due.slice(0, 7) !== month) continue;
-      if (!marks[task.due]) marks[task.due] = [];
-      if (marks[task.due].indexOf(task.sphereId) === -1) marks[task.due].push(task.sphereId);
+      if (!task.due) continue;
+      const from = task.start || task.due;
+      const to = task.due;
+      if (to.slice(0, 7) < month || from.slice(0, 7) > month) continue;
+
+      let date = from;
+      while (date <= to) {
+        if (date.slice(0, 7) === month) {
+          if (!bars[date]) bars[date] = [];
+          const already = bars[date].find(m => m.sphereId === task.sphereId && m.span === !!task.start);
+          const mark = {
+            sphereId: task.sphereId,
+            span: !!task.start,
+            head: date === from,
+            tail: date === to
+          };
+          if (already) {
+            already.head = already.head || mark.head;
+            already.tail = already.tail || mark.tail;
+          } else {
+            bars[date].push(mark);
+          }
+        }
+        date = shiftDate(date, 1);
+      }
     }
-    return marks;
+
+    return bars;
   }
 
   function pad(n) { return n < 10 ? '0' + n : String(n); }
@@ -247,7 +272,7 @@
 
   const Stats = {
     plural, fill, label, tasksOn, overdue, upcoming,
-    monthMarks, monthGrid, monthTitle, shiftMonth, MONTHS,
+    monthBars, monthGrid, monthTitle, shiftMonth, MONTHS,
     shiftDate, dayReport, weekReport, summary
   };
 

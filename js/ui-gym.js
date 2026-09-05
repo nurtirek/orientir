@@ -53,13 +53,16 @@
         });
         const reps = e('input', {
           type: 'number', inputmode: 'numeric', min: '0', step: '1',
-          placeholder: 'повторы', value: set.reps,
+          placeholder: 'раз', value: set.reps,
           oninput: ev => { draft.sets[index].reps = ev.target.value; }
         });
         weight.addEventListener('keydown', ev => { if (ev.key === 'Enter') reps.focus(); });
         reps.addEventListener('keydown', ev => { if (ev.key === 'Enter') submit(); });
         sets.appendChild(e('div', { class: 'set' }, [
-          e('span', { text: String(index + 1) }), weight, reps
+          e('span', { text: String(index + 1) }),
+          weight,
+          e('span', { class: 'x', text: '×' }),
+          reps
         ]));
       });
     }

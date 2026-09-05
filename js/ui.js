@@ -48,6 +48,25 @@
     return { text: longDate(due), late: false, soon: false };
   }
 
+  function shortRange(from, to) {
+    const месяцОдин = from.slice(0, 7) === to.slice(0, 7);
+    const начало = месяцОдин
+      ? String(Number(from.slice(8, 10)))
+      : shortDate(from);
+    return начало + '–' + shortDate(to);
+  }
+
+  /* срок одной датой или период двумя */
+  function humanSpan(task, today) {
+    if (!task.due) return { text: 'поставить срок', late: false, soon: false };
+    if (!task.start) return humanDue(task.due, today);
+    return {
+      text: shortRange(task.start, task.due),
+      late: task.due < today,
+      soon: task.start <= today && today <= task.due
+    };
+  }
+
   /* ── состояние ──────────────────────────────────────────────── */
 
   function update(next, focus) {
@@ -319,7 +338,7 @@
     if (loaded.warning) notice(loaded.warning);
   }
 
-  root.UI = { init, open, openReport, close, update, humanDue, shortDate, longDate, daysBetween,
+  root.UI = { init, open, openReport, close, update, humanDue, humanSpan, shortRange, shortDate, longDate, daysBetween,
     data: () => state.data, selected: () => state.sphereId };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
