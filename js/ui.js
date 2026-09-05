@@ -1,469 +1,284 @@
-(function () {
+(function (root) {
   'use strict';
 
-  var HORIZON_TITLES = { 3: '3 месяца', 6: '6 месяцев', 12: '12 месяцев' };
-  var MONTHS = ['января','февраля','марта','апреля','мая','июня',
-                'июля','августа','сентября','октября','ноября','декабря'];
-  /* цвет и иконка на сферу; для добавленных владельцем — по кругу */
-  var PALETTE = ['sky','lemon','mint','rose','lilac','peach'];
-  var AREA_LOOK = {
-    money:  { c: 'lemon', icon: 'i-coin' },
-    health: { c: 'mint',  icon: 'i-heart' },
-    skills: { c: 'sky',   icon: 'i-skill' },
-    people: { c: 'rose',  icon: 'i-people' },
-    home:   { c: 'lilac', icon: 'i-home' }
+  const el = () => root.Dom.el;
+
+  const MONTHS_OF = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+  const state = {
+    data: null,
+    sphereId: null,
+    month: null,
+    day: null,
+    focus: null,
+    storage: null
   };
 
-  var state = { data: null, storage: null, open: {} };
-  var saveTimer = null;
+  /* ── даты человеческим языком ───────────────────────────────── */
 
-  function el(tag, cls, text) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
+  function toUTC(date) {
+    return Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
   }
 
-  function look(area, index) {
-    var known = AREA_LOOK[area.id];
-    if (known) return known;
-    return { c: PALETTE[index % PALETTE.length], icon: 'i-skill' };
+  function daysBetween(from, to) {
+    return Math.round((toUTC(to) - toUTC(from)) / 86400000);
   }
 
-  function tint(node, name) {
-    node.style.setProperty('--n', 'var(--n-' + name + ')');
-    node.style.setProperty('--k', 'var(--k-' + name + ')');
+  function shortDate(date) {
+    return Number(date.slice(8, 10)) + ' ' + MONTHS_OF[Number(date.slice(5, 7)) - 1].slice(0, 3) + '.';
   }
 
-  function tilt(seed) {
-    /* устойчивый наклон: один и тот же элемент всегда лежит одинаково */
-    var h = 0;
-    for (var i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-    return (((h % 40) + 40) % 40) / 10 - 2;
+  function longDate(date) {
+    return Number(date.slice(8, 10)) + ' ' + MONTHS_OF[Number(date.slice(5, 7)) - 1];
   }
 
-  function icon(id) {
-    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    var use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    use.setAttribute('href', '#' + id);
-    svg.appendChild(use);
-    return svg;
-  }
-
-  function formatDate(iso) {
-    if (!iso) return 'неизвестно когда';
-    var p = iso.split('-');
-    return Number(p[2]) + ' ' + MONTHS[Number(p[1]) - 1];
-  }
-
-  function notice(message) {
-    var wrap = document.getElementById('noticeWrap');
-    if (!message) { wrap.hidden = true; return; }
-    document.getElementById('notice').textContent = message;
-    wrap.hidden = false;
-  }
-
-  /* ---------- правка по месту ---------- */
-  function editInPlace(node, current, onDone) {
-    var input = el('input', 'inline');
-    input.type = 'text';
-    input.value = current || '';
-    node.replaceWith(input);
-    input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
-    var settled = false;
-    function finish(save) {
-      if (settled) return;
-      settled = true;
-      var value = input.value;
-      input.replaceWith(node);
-      if (save) onDone(value); else render();
+  function humanDue(due, today) {
+    const diff = daysBetween(today, due);
+    if (diff === 0) return { text: 'сегодня', late: false, soon: true };
+    if (diff === 1) return { text: 'завтра', late: false, soon: true };
+    if (diff === -1) return { text: 'вчера', late: true, soon: false };
+    if (diff < 0) {
+      const n = Math.abs(diff);
+      if (n < 8) return { text: n + ' ' + root.Stats.plural(n, ['день', 'дня', 'дней']) + ' назад', late: true, soon: false };
+      return { text: longDate(due), late: true, soon: false };
     }
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
-    });
-    input.addEventListener('blur', function () { finish(true); });
+    if (diff < 8) return { text: 'через ' + diff + ' ' + root.Stats.plural(diff, ['день', 'дня', 'дней']), late: false, soon: true };
+    return { text: longDate(due), late: false, soon: false };
   }
 
-  function addInPlace(host, placeholder, onDone) {
-    var input = el('input', 'inline');
-    input.type = 'text';
-    input.placeholder = placeholder;
-    host.appendChild(input);
-    input.focus();
-    var settled = false;
-    function finish(save) {
-      if (settled) return;
-      settled = true;
-      var value = input.value.trim();
-      input.remove();
-      if (save && value) onDone(value); else render();
-    }
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
-    });
-    input.addEventListener('blur', function () { finish(true); });
+  /* ── состояние ──────────────────────────────────────────────── */
+
+  function update(next, focus) {
+    state.data = next;
+    state.focus = focus || null;
+    root.Store.save(state.storage, state.data);
+    render();
   }
 
-  /* ---------- мечты ---------- */
-  function renderDreams() {
-    var host = document.getElementById('dreams');
-    host.textContent = '';
-    state.data.dreams.forEach(function (dream) {
-      var card = el('article', 'pola');
-      card.style.setProperty('--r', tilt(dream.id) + 'deg');
-
-      var art = el('div', 'pola__art');
-      if (dream.image) {
-        var img = document.createElement('img');
-        img.src = 'images/' + dream.image;
-        img.alt = dream.title;
-        img.loading = 'lazy';
-        img.addEventListener('error', function () {
-          img.remove();
-          art.appendChild(el('div', 'pola__miss', 'Файл ' + dream.image + ' не найден в папке images'));
-        });
-        art.appendChild(img);
-      }
-      card.appendChild(art);
-
-      var cap = el('div', 'pola__cap');
-      var h = el('h2', 'serif', dream.title);
-      h.addEventListener('click', function () {
-        editInPlace(h, dream.title, function (v) {
-          commit(Model.editDream(state.data, dream.id, { title: v }));
-        });
-      });
-      cap.appendChild(h);
-
-      var note = el('span', null, dream.note || 'добавить заметку');
-      note.addEventListener('click', function () {
-        editInPlace(note, dream.note, function (v) {
-          commit(Model.editDream(state.data, dream.id, { note: v }));
-        });
-      });
-      cap.appendChild(note);
-      card.appendChild(cap);
-
-      var x = el('button', 'x', '×');
-      x.type = 'button';
-      x.title = 'Убрать мечту';
-      x.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (window.confirm('Убрать «' + dream.title + '» с карты?')) {
-          commit(Model.removeDream(state.data, dream.id));
-        }
-      });
-      card.appendChild(x);
-      host.appendChild(card);
-    });
+  function open(sphereId) {
+    state.sphereId = sphereId;
+    state.focus = null;
+    render();
   }
 
-  /* ---------- дерево целей ---------- */
-  function renderNode(node, depth, colour) {
-    var wrap = el('div', 'branch');
-    var isGoal = depth === 0;
-    var box = isGoal ? el('div', 'note') : el('div', 'kid');
-    if (isGoal) {
-      box.style.setProperty('--r', tilt(node.id) + 'deg');
-      if (Model.isDone(node)) box.classList.add('note--done');
-      if (node.colour) tint(box, node.colour);
-    } else if (Model.isDone(node)) {
-      box.classList.add('kid--done');
-    }
-
-    var top = isGoal ? el('div', 'top') : box;
-    var prog = Model.progress(node);
-    if (prog) {
-      top.appendChild(el('span', 'cnt', prog.done + '/' + prog.total));
-    } else {
-      var check = el('span', 'box' + (Model.isDone(node) ? ' box--on' : ''));
-      check.setAttribute('role', 'button');
-      check.setAttribute('tabindex', '0');
-      check.addEventListener('click', function (e) {
-        e.stopPropagation();
-        commit(Model.toggle(state.data, node.id));
-      });
-      top.appendChild(check);
-    }
-
-    var title = isGoal ? el('h3', null, node.title) : el('span', 't', node.title);
-    title.addEventListener('click', function (e) {
-      e.stopPropagation();
-      editInPlace(title, node.title, function (v) {
-        commit(Model.editTitle(state.data, node.id, v));
-      });
-    });
-    top.appendChild(title);
-
-    var x = el('button', 'x', '×');
-    x.type = 'button';
-    x.addEventListener('click', function (e) {
-      e.stopPropagation();
-      var kids = (node.tasks || []).length;
-      if (kids && !window.confirm('Удалить вместе с задачами внутри?')) return;
-      commit(Model.removeNode(state.data, node.id));
-    });
-    if (isGoal) box.appendChild(top);
-    box.appendChild(x);
-
-    if (isGoal) {
-      var start = el('div', 'start');
-      start.textContent = node.start
-        ? 'Старт ' + formatDate(node.startedAt) + ' · ' + node.start
-        : 'Старт ' + formatDate(node.startedAt);
-      start.addEventListener('click', function (e) {
-        e.stopPropagation();
-        editInPlace(start, node.start, function (v) {
-          commit(Model.editStart(state.data, node.id, v));
-        });
-      });
-      box.appendChild(start);
-
-      var kidsBox = el('div', 'kids');
-      if (!state.open[node.id]) kidsBox.style.display = 'none';
-      (node.tasks || []).forEach(function (kid) {
-        kidsBox.appendChild(renderNode(kid, depth + 1, colour));
-      });
-      var addKid = el('button', 'add add--kid', '+ задача');
-      addKid.type = 'button';
-      addKid.addEventListener('click', function (e) {
-        e.stopPropagation();
-        addInPlace(kidsBox, 'Что нужно сделать?', function (v) {
-          state.open[node.id] = true;
-          commit(Model.addTask(state.data, node.id, v).data);
-        });
-      });
-      kidsBox.appendChild(addKid);
-      box.appendChild(kidsBox);
-
-      box.addEventListener('click', function () {
-        state.open[node.id] = !state.open[node.id];
-        render();
-      });
-    } else if ((node.tasks || []).length) {
-      var subs = el('div', 'kids');
-      node.tasks.forEach(function (sub) { subs.appendChild(renderNode(sub, depth + 1, colour)); });
-      wrap.appendChild(box);
-      wrap.appendChild(subs);
-      return wrap;
-    }
-
-    wrap.appendChild(box);
-    return wrap;
+  function close() {
+    state.sphereId = null;
+    render();
   }
 
-  function renderHorizons() {
-    var host = document.getElementById('horizons');
-    host.textContent = '';
-
-    Model.HORIZONS.forEach(function (horizon) {
-      var section = el('section', 'horizon');
-      section.id = 'h' + horizon;
-      var inner = el('div', 'wrap');
-
-      var total = 0, done = 0;
-      state.data.goals.forEach(function (g) {
-        if (g.horizon !== horizon) return;
-        total += 1;
-        if (Model.isDone(g)) done += 1;
-      });
-
-      var head = el('div', 'hhead');
-      head.appendChild(el('h2', 'serif', HORIZON_TITLES[horizon]));
-      head.appendChild(el('em', null, total ? done + ' из ' + total + ' закрыто' : 'пока ничего'));
-      inner.appendChild(head);
-
-      var grid = el('div', 'areas');
-      state.data.areas.forEach(function (area, index) {
-        var view = look(area, index);
-        var column = el('div');
-        tint(column, view.c);
-
-        var ahead = el('div', 'ahead');
-        var ico = el('span', 'ico');
-        ico.appendChild(icon(view.icon));
-        ahead.appendChild(ico);
-        var name = el('b', null, area.name);
-        name.addEventListener('click', function () {
-          editInPlace(name, area.name, function (v) {
-            commit(Model.renameArea(state.data, area.id, v));
-          });
-        });
-        ahead.appendChild(name);
-        column.appendChild(ahead);
-
-        var stack = el('div', 'stack');
-        var goals = Model.goalsFor(state.data, horizon, area.id);
-        goals.forEach(function (goal) {
-          goal.colour = goal.colour || view.c;
-          stack.appendChild(renderNode(goal, 0, view.c));
-        });
-        if (!goals.length) stack.appendChild(el('div', 'empty', 'пока пусто'));
-
-        var add = el('button', 'add', '+ цель');
-        add.type = 'button';
-        add.addEventListener('click', function () {
-          addInPlace(stack, 'Какая цель?', function (title) {
-            var made = Model.addGoal(state.data, {
-              areaId: area.id, horizon: horizon, title: title
-            });
-            commit(made.data);
-          });
-        });
-        stack.appendChild(add);
-        column.appendChild(stack);
-        grid.appendChild(column);
-      });
-
-      inner.appendChild(grid);
-      section.appendChild(inner);
-      host.appendChild(section);
-    });
-  }
+  /* ── отрисовка ──────────────────────────────────────────────── */
 
   function render() {
-    renderDreams();
-    renderHorizons();
+    renderSoon();
+    renderDocks();
+    renderPanel();
+    root.Calendar.render({
+      data: state.data,
+      month: state.month,
+      day: state.day,
+      pick: date => { state.day = date; render(); }
+    });
+    if (root.City) root.City.update(state.data, state.sphereId);
+    state.focus = null;
   }
 
-  function commit(next) {
-    state.data = next;
-    render();
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      if (!Store.save(state.storage, state.data)) {
-        notice('Браузер не даёт сохранять на этой странице. Правки не переживут перезагрузку — нажмите «Сохранить копию».');
-      }
-    }, 300);
+  function renderSoon() {
+    const e = el();
+    const host = document.getElementById('soon');
+    root.Dom.clear(host);
+
+    const today = root.Model.today();
+    const list = root.Stats.upcoming(state.data, today, 3);
+    if (list.length === 0) return;
+
+    for (const task of list) {
+      const said = humanDue(task.due, today);
+      const sphere = root.Model.sphere(task.sphereId);
+      host.appendChild(e('button', {
+        class: 'soon-item' + (said.late ? ' late' : ''),
+        type: 'button',
+        style: '--sphere:' + sphere.color,
+        onclick: () => open(task.sphereId)
+      }, [
+        e('i', {}),
+        e('b', { text: task.title }),
+        e('em', { text: said.text })
+      ]));
+    }
   }
 
-  /* ---------- копия на диск ---------- */
-  function download(name, text) {
-    var blob = new Blob([text], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('a');
+  function renderDocks() {
+    const e = el();
+    const host = document.getElementById('docks');
+    root.Dom.clear(host);
+
+    for (const sphere of root.Model.SPHERES) {
+      host.appendChild(e('button', {
+        class: 'dock',
+        type: 'button',
+        style: '--sphere:' + sphere.color,
+        'aria-current': state.sphereId === sphere.id ? 'true' : 'false',
+        onclick: () => (state.sphereId === sphere.id ? close() : open(sphere.id))
+      }, [
+        e('i', {}),
+        e('b', { text: sphere.name }),
+        e('span', { text: root.Stats.label(state.data, sphere.id) })
+      ]));
+    }
+  }
+
+  const NOTES = {
+    work: 'Задачи и сроки. Башня показывает долю сделанного.',
+    gym: 'Каждая тренировка — новый этаж. Этажи не пропадают.',
+    social: 'Быстрые заметки для Threads и TikTok.',
+    study: 'Домашка со сроками — она же попадает в календарь.',
+    money: 'Траты, приходы и накопления.'
+  };
+
+  function renderPanel() {
+    const panel = document.getElementById('panel');
+    const body = document.getElementById('panel-body');
+
+    if (!state.sphereId) {
+      panel.hidden = true;
+      root.Dom.clear(body);
+      return;
+    }
+
+    const sphere = root.Model.sphere(state.sphereId);
+    panel.hidden = false;
+    panel.style.setProperty('--sphere', sphere.color);
+    document.getElementById('panel-title').textContent = sphere.name;
+    document.getElementById('panel-note').textContent = NOTES[sphere.id] || '';
+
+    root.Dom.clear(body);
+
+    const ctx = {
+      data: state.data,
+      sphereId: sphere.id,
+      sphere: sphere,
+      focus: state.focus,
+      update: update
+    };
+
+    if (sphere.kind === 'gym') root.PanelGym.render(body, ctx);
+    else if (sphere.kind === 'money') root.PanelMoney.render(body, ctx);
+    else root.PanelTasks.render(body, ctx);
+  }
+
+  /* ── сообщения ──────────────────────────────────────────────── */
+
+  function notice(text, action) {
+    const e = el();
+    const host = document.getElementById('notice');
+    root.Dom.clear(host);
+    host.hidden = false;
+    host.appendChild(e('span', { text: text }));
+    if (action) host.appendChild(e('button', { class: 'link', type: 'button', text: action.text, onclick: action.run }));
+    host.appendChild(e('button', {
+      class: 'link', type: 'button', text: 'Скрыть',
+      onclick: () => { host.hidden = true; }
+    }));
+  }
+
+  /* ── файлы ──────────────────────────────────────────────────── */
+
+  function download(text, name) {
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
     link.href = url;
     link.download = name;
-    link.rel = 'noopener';
-    /* ссылка обязана быть в документе: Safari и Firefox игнорируют
-       клик по элементу, которого нет на странице */
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  /* запасной путь, если браузер режет скачивание на file:// */
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text);
-    }
-    var area = document.createElement('textarea');
-    area.value = text;
-    area.style.position = 'fixed';
-    area.style.opacity = '0';
-    document.body.appendChild(area);
-    area.select();
-    try { document.execCommand('copy'); } catch (e) {}
-    document.body.removeChild(area);
-    return Promise.resolve();
-  }
+  function wireTools(archive) {
+    document.getElementById('btn-save').addEventListener('click', () => {
+      download(root.Model.serialize(state.data), root.Store.exportName());
+    });
 
-  /* хранилище, которое нельзя уронить: на file:// обращение к localStorage
-     в Chrome может выбросить ошибку сразу при доступе к свойству */
-  function pickStorage() {
-    try {
-      var real = window.localStorage;
-      real.setItem('wishmap-probe', '1');
-      real.removeItem('wishmap-probe');
-      return { store: real, persistent: true };
-    } catch (e) {
-      var mem = {};
-      return {
-        persistent: false,
-        store: {
-          getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
-          setItem: function (k, v) { mem[k] = String(v); },
-          removeItem: function (k) { delete mem[k]; }
-        }
+    const file = document.getElementById('file');
+    document.getElementById('btn-load').addEventListener('click', () => file.click());
+    file.addEventListener('change', () => {
+      const chosen = file.files && file.files[0];
+      if (!chosen) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = root.Model.parse(String(reader.result));
+        if (!res.ok) { notice('Файл не подошёл: ' + res.error); return; }
+        update(res.data);
+        notice('Данные загружены из файла.');
       };
+      reader.readAsText(chosen);
+      file.value = '';
+    });
+
+    document.getElementById('btn-calendar').addEventListener('click', () => {
+      document.getElementById('calendar').classList.toggle('shown');
+    });
+
+    document.getElementById('panel-close').addEventListener('click', close);
+
+    document.getElementById('cal-prev').addEventListener('click', () => {
+      state.month = root.Stats.shiftMonth(state.month, -1);
+      render();
+    });
+    document.getElementById('cal-next').addEventListener('click', () => {
+      state.month = root.Stats.shiftMonth(state.month, 1);
+      render();
+    });
+
+    document.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape' && state.sphereId) close();
+    });
+
+    if (archive) {
+      notice('Прежняя карта желаний сохранена в архив.', {
+        text: 'Скачать её файлом',
+        run: () => download(archive, 'karta-zhelaniy.json')
+      });
     }
+  }
+
+  /* ── запуск ─────────────────────────────────────────────────── */
+
+  function memoryStorage() {
+    /* запасное хранилище: страница работает даже там, где браузер
+       запретил localStorage — правки просто не переживут перезагрузку */
+    const map = new Map();
+    return {
+      getItem: k => (map.has(k) ? map.get(k) : null),
+      setItem: (k, v) => { map.set(k, String(v)); },
+      removeItem: k => { map.delete(k); }
+    };
   }
 
   function init() {
-    var picked = pickStorage();
-    state.storage = picked.store;
-    var loaded = Store.load(state.storage);
-    state.data = loaded.data;
-    if (!picked.persistent) {
-      notice('Браузер не разрешает сохранение на этой странице. Правки живут только до перезагрузки — нажмите «Скопировать данные», чтобы их не потерять.');
-    } else if (loaded.warning) {
-      notice(loaded.warning);
+    let storage;
+    try {
+      storage = root.Store.available(window.localStorage) ? window.localStorage : memoryStorage();
+    } catch (err) {
+      storage = memoryStorage();
     }
+    state.storage = storage;
+
+    const loaded = root.Store.load(storage);
+    state.data = loaded.data;
+    state.month = root.Model.today().slice(0, 7);
+
+    wireTools(loaded.archive);
     render();
 
-    document.getElementById('addDream').addEventListener('click', function () {
-      var host = document.getElementById('dreams');
-      addInPlace(host, 'О чём мечтаешь?', function (v) {
-        commit(Model.addDream(state.data, v).data);
-      });
-    });
-
-    document.getElementById('exportBtn').addEventListener('click', function () {
-      var name = Store.exportName();
-      download(name, Model.serialize(state.data));
-      notice('Копия сохранена: ' + name + '. Ищите её в Загрузках. Если файла там нет — нажмите «Скопировать данные».');
-    });
-
-    document.getElementById('copyBtn').addEventListener('click', function () {
-      copyToClipboard(Model.serialize(state.data)).then(function () {
-        notice('Данные скопированы в буфер. Вставьте их куда нужно.');
-      });
-    });
-    var input = document.getElementById('importInput');
-    document.getElementById('importBtn').addEventListener('click', function () { input.click(); });
-    input.addEventListener('change', function (e) {
-      var file = e.target.files[0];
-      if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function () {
-        var res = Model.parse(String(reader.result));
-        if (!res.ok) { notice('Файл не подошёл: ' + res.error); return; }
-        commit(res.data);
-        notice('Загружено из файла');
-      };
-      reader.readAsText(file);
-      e.target.value = '';
-    });
-
-    var tt = document.getElementById('tt');
-    tt.addEventListener('click', function () {
-      var dark = document.documentElement.dataset.t === 'dark';
-      document.documentElement.dataset.t = dark ? '' : 'dark';
-      tt.querySelector('use').setAttribute('href', dark ? '#i-moon' : '#i-sun');
-      try { state.storage.setItem('wishmap-theme', dark ? 'light' : 'dark'); } catch (err) {}
-    });
-    try {
-      if (state.storage.getItem('wishmap-theme') === 'light') {
-        document.documentElement.dataset.t = '';
-        tt.querySelector('use').setAttribute('href', '#i-moon');
-      }
-    } catch (err) {}
+    if (loaded.warning) notice(loaded.warning);
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    try {
-      init();
-    } catch (e) {
-      var box = document.createElement('div');
-      box.className = 'notice-wrap';
-      box.innerHTML = '<div class="notice"></div>';
-      box.querySelector('.notice').textContent =
-        'Страница не запустилась: ' + (e && e.message ? e.message : e);
-      document.body.prepend(box);
-    }
-  });
-})();
+  root.UI = { init, open, close, update, humanDue, shortDate, longDate, daysBetween,
+    data: () => state.data, selected: () => state.sphereId };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})(typeof globalThis !== 'undefined' ? globalThis : this);
