@@ -10,8 +10,35 @@ const SLAB_H = 0.36;
 const MAX_TOWER_HEIGHT = 11;
 
 let renderer, scene, camera, raycaster, labelBox;
+let skyMat, platform, hemi, sun;
 let towers = [];
 let ready = false;
+let lastData = null;
+let lastSelected = null;
+let lastPanel = false;
+
+const THEMES = {
+  light: {
+    skyHigh: '#cfe0f5', skyLow: '#f5f8fc', fog: 0xeff3f9,
+    platform: 0xdde4ee, plinth: 0xc7d0de,
+    ghost: 0x8e9cb5, ghostOpacity: 0.16, edge: 0x6d7a95, edgeOpacity: 0.34,
+    emissive: 0.05, roughness: 0.5, glow: 0.15,
+    hemiSky: 0xffffff, hemiGround: 0xc3cddc, hemi: 2.6,
+    sun: 0xfff4e6, sunPower: 3.0, exposure: 1.0
+  },
+  dark: {
+    skyHigh: '#1d2740', skyLow: '#05070d', fog: 0x080b13,
+    platform: 0x141c2c, plinth: 0x1b2436,
+    ghost: 0xb6c6e2, ghostOpacity: 0.035, edge: 0xb9cbe8, edgeOpacity: 0.22,
+    emissive: 0.26, roughness: 0.66, glow: 1,
+    hemiSky: 0x33456b, hemiGround: 0x080c15, hemi: 1.15,
+    sun: 0xdfe8ff, sunPower: 2.1, exposure: 1.05
+  }
+};
+
+function theme() {
+  return THEMES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
+}
 
 const view = {
   radius: 20, theta: -0.3, phi: 1.19,
@@ -66,8 +93,8 @@ function sky() {
     side: THREE.BackSide,
     depthWrite: false,
     uniforms: {
-      high: { value: new THREE.Color('#1d2740') },
-      low: { value: new THREE.Color('#05070d') }
+      high: { value: new THREE.Color(theme().skyHigh) },
+      low: { value: new THREE.Color(theme().skyLow) }
     },
     vertexShader: `
       varying float h;
@@ -84,8 +111,10 @@ function sky() {
         gl_FragColor = vec4(mix(low, high, t), 1.0);
       }`
   });
+  skyMat = mat;
   return new THREE.Mesh(geo, mat);
 }
+
 
 /* ── сборка сцены ─────────────────────────────────────────────── */
 
@@ -97,19 +126,20 @@ function build(spheres) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = theme().exposure;
 
   scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x080b13, 34, 92);
+  scene.fog = new THREE.Fog(theme().fog, 34, 92);
   scene.add(sky());
 
   camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 300);
   raycaster = new THREE.Raycaster();
   labelBox = document.getElementById('labels');
 
-  scene.add(new THREE.HemisphereLight(0x33456b, 0x080c15, 1.15));
+  hemi = new THREE.HemisphereLight(theme().hemiSky, theme().hemiGround, theme().hemi);
+  scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xdfe8ff, 2.1);
+  sun = new THREE.DirectionalLight(theme().sun, theme().sunPower);
   sun.position.set(-14, 22, 12);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -124,9 +154,9 @@ function build(spheres) {
   scene.add(sun);
 
   const width = SPACING * spheres.length + 2.6;
-  const platform = new THREE.Mesh(
+  platform = new THREE.Mesh(
     slab(width, 1.0, 7.6, 1.2),
-    new THREE.MeshStandardMaterial({ color: 0x141c2c, roughness: 0.45, metalness: 0.55 })
+    new THREE.MeshStandardMaterial({ color: theme().platform, roughness: 0.5, metalness: 0.3 })
   );
   platform.position.y = -1.0;
   platform.receiveShadow = true;
@@ -142,7 +172,7 @@ function build(spheres) {
 
     const plinth = new THREE.Mesh(
       slab(SLAB_W + 0.4, 0.26, SLAB_W + 0.4, 0.16),
-      new THREE.MeshStandardMaterial({ color: 0x1b2436, roughness: 0.6, metalness: 0.35 })
+      new THREE.MeshStandardMaterial({ color: theme().plinth, roughness: 0.6, metalness: 0.25 })
     );
     plinth.receiveShadow = true;
     plinth.castShadow = true;
@@ -164,6 +194,7 @@ function build(spheres) {
 
     towers.push({
       sphere: sphere,
+      plinth: plinth,
       color: color,
       group: group,
       glow: glow,
@@ -198,6 +229,7 @@ function rebuild(tower, lit, slots) {
   const step = height * 1.16;
   const geo = slab(SLAB_W, height, SLAB_W, 0.12);
   const base = 0.26;
+  const look = theme();
 
   for (let i = 0; i < slots; i += 1) {
     const on = i < lit;
@@ -205,16 +237,16 @@ function rebuild(tower, lit, slots) {
       ? new THREE.MeshStandardMaterial({
           color: tower.color,
           emissive: tower.color,
-          emissiveIntensity: 0.26,
-          roughness: 0.66,
+          emissiveIntensity: look.emissive,
+          roughness: look.roughness,
           metalness: 0.05
         })
       : new THREE.MeshStandardMaterial({
-          color: 0xb6c6e2,
+          color: look.ghost,
           roughness: 0.95,
           metalness: 0,
           transparent: true,
-          opacity: 0.035
+          opacity: look.ghostOpacity
         });
 
     const mesh = new THREE.Mesh(geo.clone(), material);
@@ -230,7 +262,7 @@ function rebuild(tower, lit, slots) {
     if (!on) {
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(mesh.geometry, 25),
-        new THREE.LineBasicMaterial({ color: 0xb9cbe8, transparent: true, opacity: 0.22 })
+        new THREE.LineBasicMaterial({ color: look.edge, transparent: true, opacity: look.edgeOpacity })
       );
       edges.position.copy(mesh.position);
       edges.scale.copy(mesh.scale);
@@ -244,7 +276,7 @@ function rebuild(tower, lit, slots) {
   geo.dispose();
   tower.height = base + slots * step;
   tower.glow.position.y = Math.max(0.9, lit * step + 0.7);
-  tower.glowFull = lit === 0 ? 0 : 3 + Math.min(lit, 20) * 0.7;
+  tower.glowFull = (lit === 0 ? 0 : 3 + Math.min(lit, 20) * 0.7) * look.glow;
   tower.glow.intensity = tower.glowFull * tower.dim;
 }
 
@@ -261,8 +293,11 @@ function shape(data, sphere) {
   return { lit: Math.round(count.filled / count.total * SLOTS), slots: SLOTS };
 }
 
-export function update(data, selectedId) {
+export function update(data, selectedId, panelOpen) {
   if (!ready) return;
+  lastData = data;
+  lastSelected = selectedId;
+  lastPanel = !!panelOpen;
 
   for (const tower of towers) {
     const form = shape(data, tower.sphere);
@@ -282,6 +317,30 @@ export function update(data, selectedId) {
   view.targetRadius = distance();
   view.targetHeight = chosen ? 3.4 : 2.4;
   view.spin = !selectedId;
+}
+
+export function setTheme() {
+  if (!ready) return;
+  const look = theme();
+
+  skyMat.uniforms.high.value.set(look.skyHigh);
+  skyMat.uniforms.low.value.set(look.skyLow);
+  scene.fog.color.set(look.fog);
+  renderer.toneMappingExposure = look.exposure;
+
+  platform.material.color.set(look.platform);
+  hemi.color.set(look.hemiSky);
+  hemi.groundColor.set(look.hemiGround);
+  hemi.intensity = look.hemi;
+  sun.color.set(look.sun);
+  sun.intensity = look.sunPower;
+
+  for (const tower of towers) {
+    tower.plinth.material.color.set(look.plinth);
+    tower.state = null;          /* этажи пересоберутся с новыми материалами */
+  }
+
+  if (lastData) update(lastData, lastSelected, lastPanel);
 }
 
 /* ── управление камерой ───────────────────────────────────────── */
@@ -391,6 +450,8 @@ function frame() {
   );
   camera.lookAt(target);
 
+  const look = theme();
+
   for (const tower of towers) {
     tower.dim += (tower.targetDim - tower.dim) * (still ? 1 : 0.08);
     tower.glow.intensity = tower.glowFull * tower.dim;
@@ -401,10 +462,10 @@ function frame() {
         if (floor.edges) floor.edges.scale.y = floor.mesh.scale.y;
       }
       if (floor.lit) {
-        floor.mesh.material.emissiveIntensity = 0.26 * tower.dim;
+        floor.mesh.material.emissiveIntensity = look.emissive * tower.dim;
       } else {
-        floor.mesh.material.opacity = 0.035 * tower.dim;
-        if (floor.edges) floor.edges.material.opacity = 0.22 * tower.dim;
+        floor.mesh.material.opacity = look.ghostOpacity * tower.dim;
+        if (floor.edges) floor.edges.material.opacity = look.edgeOpacity * tower.dim;
       }
     }
 
@@ -432,11 +493,11 @@ export function start() {
     view.radius = view.targetRadius = distance();
     window.addEventListener('resize', resize);
     ready = true;
-    window.City = { update: update };
+    window.City = { update: update, setTheme: setTheme };
     /* модуль выполняется раньше DOMContentLoaded, данные может ещё не подняться:
        тогда первый кадр нарисует UI.render(), он сам зовёт City.update */
     const data = window.UI.data();
-    if (data) update(data, window.UI.selected());
+    if (data) update(data, window.UI.selected(), false);
     frame();
   } catch (err) {
     /* без сцены страница остаётся рабочей: сферы открываются кнопками внизу */

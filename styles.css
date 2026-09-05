@@ -1,7 +1,38 @@
-/* Ориентир — ночной макет города. Тёмное небо, светящиеся башни,
-   интерфейс — тонкое стекло поверх сцены. */
+/* Ориентир. Днём — светлый макет города на столе, ночью тот же макет
+   в темноте со светящимися башнями. Тема переключается кнопкой. */
 
 :root {
+  color-scheme: light;
+
+  --bg: #e9edf4;
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-soft: rgba(20, 30, 55, 0.045);
+  --line: rgba(20, 30, 55, 0.11);
+  --line-strong: rgba(20, 30, 55, 0.24);
+  --ink: #16203a;
+  --dim: #59647e;
+  --faint: #8b95ac;
+  --danger: #d23b32;
+  --good: #1f9d63;
+  --input-bg: rgba(255, 255, 255, 0.85);
+  --on-sphere: #ffffff;
+  --notice-bg: rgba(255, 250, 240, 0.95);
+  --pressed: rgba(20, 30, 55, 0.1);
+  --shadow: 0 20px 50px rgba(25, 40, 80, 0.14);
+  --tag-shadow: 0 1px 10px rgba(255, 255, 255, 0.85);
+
+  --sphere: #4f7cff;
+  --sphere-ink: color-mix(in srgb, var(--sphere) 74%, #0a1226);
+
+  --display: "Avenir Next", "Avenir", "Futura", system-ui, sans-serif;
+  --text: system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+
+  --r: 16px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
   --bg: #070a11;
   --glass: rgba(15, 20, 32, 0.74);
   --glass-soft: rgba(255, 255, 255, 0.045);
@@ -11,14 +42,15 @@
   --dim: #98a2ba;
   --faint: #5d6780;
   --danger: #ff6a6a;
-  --sphere: #4f7cff;
-
-  --display: "Avenir Next", "Avenir", "Futura", system-ui, sans-serif;
-  --text: system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-
-  --r: 16px;
-  --gap: 14px;
+  --good: #7ee0a8;
+  --input-bg: rgba(0, 0, 0, 0.25);
+  --on-sphere: #08101f;
+  --notice-bg: rgba(30, 22, 14, 0.92);
+  --pressed: rgba(255, 255, 255, 0.14);
   --shadow: 0 26px 70px rgba(0, 0, 0, 0.55);
+  --tag-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
+
+  --sphere-ink: var(--sphere);
 }
 
 * { box-sizing: border-box; }
@@ -35,10 +67,7 @@ html, body {
   overflow: hidden;
 }
 
-button, input, select {
-  font: inherit;
-  color: inherit;
-}
+button, input, select { font: inherit; color: inherit; }
 
 :focus-visible {
   outline: 2px solid var(--sphere);
@@ -46,13 +75,7 @@ button, input, select {
   border-radius: 6px;
 }
 
-#scene {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
 /* ── подписи над башнями ───────────────────────────────────────── */
 
@@ -71,9 +94,8 @@ button, input, select {
   font-family: var(--display);
   font-weight: 600;
   font-size: 15px;
-  letter-spacing: 0.01em;
   color: var(--ink);
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+  text-shadow: var(--tag-shadow);
 }
 
 .tag span {
@@ -81,7 +103,7 @@ button, input, select {
   margin-top: 1px;
   font-size: 12px;
   color: var(--tag-color, var(--dim));
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  text-shadow: var(--tag-shadow);
   font-variant-numeric: tabular-nums;
 }
 
@@ -103,16 +125,11 @@ button, input, select {
   font-size: 17px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(238, 242, 250, 0.85);
+  color: var(--ink);
+  opacity: 0.85;
 }
 
-#soon {
-  flex: 1;
-  display: flex;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
-}
+#soon { flex: 1; display: flex; gap: 8px; min-width: 0; overflow: hidden; }
 
 .soon-item {
   display: flex;
@@ -138,20 +155,10 @@ button, input, select {
   flex: none;
 }
 
-.soon-item em {
-  font-style: normal;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.soon-item.late { border-color: rgba(255, 106, 106, 0.5); }
+.soon-item em { font-style: normal; color: var(--faint); font-variant-numeric: tabular-nums; }
+.soon-item.late { border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
 .soon-item.late em { color: var(--danger); }
-
-.soon-item b {
-  font-weight: 400;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.soon-item b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
 
 #tools { display: flex; gap: 8px; flex: none; }
 
@@ -210,29 +217,16 @@ button, input, select {
   width: 8px; height: 8px;
   border-radius: 50%;
   background: var(--sphere);
-  box-shadow: 0 0 10px var(--sphere);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sphere) 70%, transparent);
   flex: none;
 }
 
-.dock b {
-  font-family: var(--display);
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.dock span {
-  color: var(--faint);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.dock[aria-current="true"] {
-  background: color-mix(in srgb, var(--sphere) 22%, transparent);
-}
-
+.dock b { font-family: var(--display); font-weight: 500; font-size: 14px; }
+.dock span { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.dock[aria-current="true"] { background: color-mix(in srgb, var(--sphere) 20%, transparent); }
 .dock[aria-current="true"] span { color: var(--dim); }
 
-/* ── панель сферы ──────────────────────────────────────────────── */
+/* ── панель ────────────────────────────────────────────────────── */
 
 #panel {
   position: fixed;
@@ -258,7 +252,7 @@ button, input, select {
 }
 
 #panel::-webkit-scrollbar { width: 8px; }
-#panel::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+#panel::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
 
 #panel-close {
   position: absolute;
@@ -280,23 +274,18 @@ button, input, select {
   font-weight: 600;
   font-size: 26px;
   letter-spacing: -0.01em;
-  color: var(--sphere);
+  color: var(--sphere-ink);
 }
 
 #panel-note {
   margin: 2px 0 18px;
   color: var(--faint);
   font-size: 13px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── общие части панелей ───────────────────────────────────────── */
 
-.field {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
+.field { display: flex; gap: 8px; margin-bottom: 16px; }
 
 .field input[type="text"],
 .field input[type="number"],
@@ -306,7 +295,7 @@ button, input, select {
   padding: 10px 13px;
   border: 1px solid var(--line);
   border-radius: 11px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--input-bg);
   color: var(--ink);
 }
 
@@ -318,7 +307,7 @@ button, input, select {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sphere) 18%, transparent);
 }
 
-.field input[type="date"] { flex: 0 0 140px; color-scheme: dark; }
+.field input[type="date"] { flex: 0 0 140px; }
 
 .go {
   flex: none;
@@ -326,19 +315,15 @@ button, input, select {
   border: 0;
   border-radius: 11px;
   background: var(--sphere);
-  color: #08101f;
+  color: var(--on-sphere);
   font-size: 19px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.go:hover { filter: brightness(1.12); }
+.go:hover { filter: brightness(1.08); }
 
-.empty {
-  margin: 26px 0;
-  color: var(--faint);
-  font-size: 14px;
-}
+.empty { margin: 26px 0; color: var(--faint); font-size: 14px; }
 
 .rows { list-style: none; margin: 0; padding: 0; }
 
@@ -368,7 +353,7 @@ button, input, select {
 .row.done .tick {
   background: var(--sphere);
   border-color: var(--sphere);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--sphere) 55%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--sphere) 45%, transparent);
 }
 
 .row-main { flex: 1; min-width: 0; }
@@ -399,7 +384,7 @@ button, input, select {
 
 .row-due:hover { color: var(--dim); }
 .row-due.late { color: var(--danger); }
-.row-due.soon { color: var(--sphere); }
+.row-due.soon { color: var(--sphere-ink); }
 
 .kill {
   flex: none;
@@ -411,24 +396,14 @@ button, input, select {
   font-size: 15px;
 }
 
-.row:hover .kill { color: var(--faint); }
+.row:hover .kill, .log-line:hover .kill { color: var(--faint); }
 .kill:hover { color: var(--danger) !important; }
 
-.sub {
-  margin: 24px 0 10px;
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  color: var(--faint);
-}
+.sub { margin: 24px 0 10px; font-size: 12px; letter-spacing: 0.05em; color: var(--faint); }
 
-/* ── деньги ────────────────────────────────────────────────────── */
+/* ── деньги и цифры ────────────────────────────────────────────── */
 
-.figures {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 18px;
-}
+.figures { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
 
 .figure {
   padding: 13px 15px;
@@ -438,14 +413,7 @@ button, input, select {
 }
 
 .figure.wide { grid-column: 1 / -1; }
-
-.figure em {
-  display: block;
-  font-style: normal;
-  font-size: 12px;
-  color: var(--faint);
-  margin-bottom: 3px;
-}
+.figure em { display: block; font-style: normal; font-size: 12px; color: var(--faint); margin-bottom: 3px; }
 
 .figure b {
   font-family: var(--display);
@@ -455,14 +423,15 @@ button, input, select {
   font-variant-numeric: tabular-nums;
 }
 
-.figure.wide b { color: var(--sphere); }
+.figure.wide b { color: var(--sphere-ink); }
+.figure.wide b.out { color: var(--danger); }
 .figure small { display: block; margin-top: 3px; color: var(--faint); font-size: 12px; }
 
 .bar {
   height: 5px;
   margin-top: 10px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-soft);
   overflow: hidden;
 }
 
@@ -471,7 +440,6 @@ button, input, select {
   height: 100%;
   border-radius: 3px;
   background: var(--sphere);
-  box-shadow: 0 0 12px var(--sphere);
   transition: width 0.5s cubic-bezier(0.22, 0.9, 0.3, 1);
 }
 
@@ -493,15 +461,15 @@ button, input, select {
 .kind.save:hover { border-color: var(--sphere); }
 
 .money-row b { font-variant-numeric: tabular-nums; font-weight: 500; }
-.money-row .in { color: #7ee0a8; }
+.money-row .in { color: var(--good); }
 .money-row .out { color: var(--danger); }
-.money-row .put { color: var(--sphere); }
+.money-row .put { color: var(--sphere-ink); }
 
 .link {
   border: 0;
   background: transparent;
   padding: 0;
-  color: var(--sphere);
+  color: var(--sphere-ink);
   cursor: pointer;
   font-size: 13px;
 }
@@ -509,7 +477,6 @@ button, input, select {
 /* ── зал ───────────────────────────────────────────────────────── */
 
 .sets { display: grid; gap: 8px; margin-bottom: 12px; }
-
 .set { display: flex; align-items: center; gap: 8px; }
 .set span { color: var(--faint); font-size: 12px; width: 16px; text-align: right; }
 .set input { flex: 1; min-width: 0; }
@@ -524,11 +491,12 @@ button, input, select {
 }
 
 .pr-name { font-size: 14px; }
+
 .pr-weight {
   font-family: var(--display);
   font-weight: 600;
   font-size: 19px;
-  color: var(--sphere);
+  color: var(--sphere-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -546,6 +514,68 @@ button, input, select {
 .log-line em { font-style: normal; color: var(--faint); font-variant-numeric: tabular-nums; flex: none; }
 .log-line b { font-weight: 500; }
 .log-line span { color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* ── итоги ─────────────────────────────────────────────────────── */
+
+.verdict {
+  padding: 15px 17px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--glass-soft);
+  margin-bottom: 4px;
+}
+
+.verdict p {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.verdict p:last-child { margin-bottom: 0; }
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.col { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.col-bar { display: flex; align-items: flex-end; height: 60px; }
+
+.col-bar i {
+  display: block;
+  width: 22px;
+  border-radius: 5px 5px 2px 2px;
+  background: var(--sphere);
+  opacity: 0.85;
+}
+
+.col-bar i.none { background: var(--line-strong); opacity: 0.5; }
+.col.now .col-bar i { opacity: 1; box-shadow: 0 0 14px color-mix(in srgb, var(--sphere) 45%, transparent); }
+.col span { font-size: 11px; color: var(--faint); }
+.col.now span { color: var(--ink); }
+
+.col u {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--sphere) 80%, transparent);
+}
+
+.col u.off { background: transparent; }
+
+.share {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+
+.share span { width: 78px; font-size: 13px; color: var(--dim); flex: none; }
+.share .bar { flex: 1; margin-top: 0; }
+.share b { font-variant-numeric: tabular-nums; font-weight: 500; width: 20px; text-align: right; }
 
 /* ── календарь ─────────────────────────────────────────────────── */
 
@@ -565,33 +595,13 @@ button, input, select {
 
 #calendar[hidden] { display: none; }
 
-.cal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-#cal-title {
-  font-family: var(--display);
-  font-weight: 500;
-  font-size: 15px;
-}
-
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+#cal-title { font-family: var(--display); font-weight: 500; font-size: 15px; }
 .cal-head .quiet { padding: 2px 10px; background: transparent; border-color: transparent; }
 
-#cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
+#cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 
-.wd {
-  text-align: center;
-  font-size: 11px;
-  color: var(--faint);
-  padding-bottom: 4px;
-}
+.wd { text-align: center; font-size: 11px; color: var(--faint); padding-bottom: 4px; }
 
 .day {
   position: relative;
@@ -609,32 +619,18 @@ button, input, select {
 .day:hover { background: var(--glass-soft); color: var(--ink); }
 .day.blank { visibility: hidden; }
 .day.today { color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.day[aria-pressed="true"] { background: rgba(255, 255, 255, 0.14); color: var(--ink); }
+.day[aria-pressed="true"] { background: var(--pressed); color: var(--ink); }
 
-.dots {
-  position: absolute;
-  left: 0; right: 0; bottom: 3px;
-  display: flex;
-  justify-content: center;
-  gap: 2px;
-}
-
+.dots { position: absolute; left: 0; right: 0; bottom: 3px; display: flex; justify-content: center; gap: 2px; }
 .dots i { width: 4px; height: 4px; border-radius: 50%; }
 
 #cal-day { margin-top: 10px; }
 #cal-day:empty { display: none; }
 
-.cal-task {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  padding: 4px 0;
-  font-size: 13px;
-}
-
+.cal-task { display: flex; align-items: baseline; gap: 7px; padding: 4px 0; font-size: 13px; }
 .cal-task i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
-.cal-task.done b { color: var(--faint); text-decoration: line-through; font-weight: 400; }
 .cal-task b { font-weight: 400; }
+.cal-task.done b { color: var(--faint); text-decoration: line-through; }
 
 /* ── сообщения ─────────────────────────────────────────────────── */
 
@@ -646,7 +642,7 @@ button, input, select {
   padding: 12px 16px;
   border: 1px solid var(--line-strong);
   border-radius: 14px;
-  background: rgba(30, 22, 14, 0.92);
+  background: var(--notice-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--shadow);
@@ -660,16 +656,18 @@ button, input, select {
 #notice[hidden] { display: none; }
 #notice .link { flex: none; }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   #calendar { display: none; }
-  #calendar.shown { display: block; left: 16px; right: 16px; width: auto; bottom: 86px; }
+  #calendar.shown { display: block; }
+}
+
+@media (max-width: 900px) {
+  #calendar.shown { left: 16px; right: 16px; width: auto; bottom: 86px; }
   #panel { top: 58px; }
   #soon .soon-item:nth-child(n + 2) { display: none; }
-  #tools .quiet:not(#btn-calendar) { display: none; }
+  #tools .quiet:not(#btn-calendar):not(#btn-report) { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
-
-.figure.wide b.out { color: var(--danger); }

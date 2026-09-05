@@ -9,6 +9,7 @@
   const state = {
     data: null,
     sphereId: null,
+    report: false,
     month: null,
     day: null,
     focus: null,
@@ -58,12 +59,20 @@
 
   function open(sphereId) {
     state.sphereId = sphereId;
+    state.report = false;
     state.focus = null;
+    render();
+  }
+
+  function openReport() {
+    state.sphereId = null;
+    state.report = true;
     render();
   }
 
   function close() {
     state.sphereId = null;
+    state.report = false;
     render();
   }
 
@@ -79,7 +88,7 @@
       day: state.day,
       pick: date => { state.day = date; render(); }
     });
-    if (root.City) root.City.update(state.data, state.sphereId);
+    if (root.City) root.City.update(state.data, state.sphereId, state.report);
     state.focus = null;
   }
 
@@ -140,6 +149,16 @@
     const panel = document.getElementById('panel');
     const body = document.getElementById('panel-body');
 
+    if (state.report) {
+      panel.hidden = false;
+      panel.style.setProperty('--sphere', '#7c8cff');
+      document.getElementById('panel-title').textContent = 'Итоги';
+      document.getElementById('panel-note').textContent = 'Что сделано за сегодня и за неделю.';
+      root.Dom.clear(body);
+      root.PanelReport.render(body, { data: state.data, update: update });
+      return;
+    }
+
     if (!state.sphereId) {
       panel.hidden = true;
       root.Dom.clear(body);
@@ -182,6 +201,21 @@
     }));
   }
 
+  /* ── тема ───────────────────────────────────────────────────── */
+
+  const THEME_KEY = 'orientir-theme';
+
+  function theme() {
+    return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  }
+
+  function applyTheme(name) {
+    document.documentElement.dataset.theme = name;
+    document.getElementById('btn-theme').textContent = name === 'dark' ? 'День' : 'Ночь';
+    try { state.storage.setItem(THEME_KEY, name); } catch (err) { /* переживём */ }
+    if (root.City) root.City.setTheme();
+  }
+
   /* ── файлы ──────────────────────────────────────────────────── */
 
   function download(text, name) {
@@ -217,6 +251,14 @@
       file.value = '';
     });
 
+    document.getElementById('btn-theme').addEventListener('click', () => {
+      applyTheme(theme() === 'dark' ? 'light' : 'dark');
+    });
+
+    document.getElementById('btn-report').addEventListener('click', () => {
+      if (state.report) close(); else openReport();
+    });
+
     document.getElementById('btn-calendar').addEventListener('click', () => {
       document.getElementById('calendar').classList.toggle('shown');
     });
@@ -233,7 +275,7 @@
     });
 
     document.addEventListener('keydown', ev => {
-      if (ev.key === 'Escape' && state.sphereId) close();
+      if (ev.key === 'Escape' && (state.sphereId || state.report)) close();
     });
 
     if (archive) {
@@ -271,12 +313,13 @@
     state.month = root.Model.today().slice(0, 7);
 
     wireTools(loaded.archive);
+    applyTheme(theme());
     render();
 
     if (loaded.warning) notice(loaded.warning);
   }
 
-  root.UI = { init, open, close, update, humanDue, shortDate, longDate, daysBetween,
+  root.UI = { init, open, openReport, close, update, humanDue, shortDate, longDate, daysBetween,
     data: () => state.data, selected: () => state.sphereId };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
